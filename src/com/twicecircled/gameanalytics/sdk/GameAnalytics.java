@@ -34,6 +34,7 @@ public class GameAnalytics {
 	private static String BUILD;
 	private static int SEND_EVENT_INTERVAL = 20000; // Default is 20 secs
 	private static int NETWORK_POLL_INTERVAL = 20000; // Default is 20 secs
+	private static int SESSION_TIME_OUT = 10000; // Default is 10 secs
 
 	// OTHER
 	private static AsyncHttpClient client;
@@ -42,7 +43,6 @@ public class GameAnalytics {
 	private static Context context;
 	private static boolean initialised = false;
 	private static Time sessionEndTime;
-	private static int sessionTimeOut = 10000; // Default is 10 secs
 
 	// TODO: Make a set of new event methods which use activity class name as
 	// 'area'
@@ -109,6 +109,9 @@ public class GameAnalytics {
 		// Set boolean initialised, newEvent() can only be called after
 		// initialise() and startSession()
 		initialised = true;
+
+		// Send off model and OS version
+		sendOffUserStats();
 	}
 
 	/**
@@ -144,7 +147,7 @@ public class GameAnalytics {
 	public static void stopSession() {
 		// sessionTimeOut is some time after now
 		sessionEndTime.setToNow();
-		sessionEndTime.set(sessionEndTime.toMillis(false) + sessionTimeOut);
+		sessionEndTime.set(sessionEndTime.toMillis(false) + SESSION_TIME_OUT);
 	}
 
 	/**
@@ -296,6 +299,38 @@ public class GameAnalytics {
 		}
 	}
 
+	/**
+	 * Set the amount of time, in milliseconds, between each batch of events
+	 * being sent. The default is 20 seconds.
+	 * 
+	 * @param millis
+	 */
+	public void setSendEventsInterval(int millis) {
+		SEND_EVENT_INTERVAL = millis;
+	}
+
+	/**
+	 * If a network is not available GameAnalytics will poll the connection and
+	 * send the events once it is restored. Set the amount of time, in
+	 * milliseconds, between polls. The default is 20 seconds.
+	 * 
+	 * @param millis
+	 */
+	public void setNetworkPollInterval(int millis) {
+		NETWORK_POLL_INTERVAL = millis;
+	}
+
+	/**
+	 * Set the amount of time, in milliseconds, for a session to timeout so that
+	 * a new one is started when the application is restarted. being sent. The
+	 * default is 20 seconds.
+	 * 
+	 * @param millis
+	 */
+	public void setSessionTimeOut(int millis) {
+		SESSION_TIME_OUT = millis;
+	}
+
 	// Generates session id from md5 hash of current time
 	private static String getSessionId() {
 		Time time = new Time();
@@ -324,6 +359,13 @@ public class GameAnalytics {
 					NETWORK_POLL_INTERVAL);
 			currentThread.start();
 		}
+	}
+
+	private static void sendOffUserStats() {
+		newUserEvent("Model:" + android.os.Build.MODEL, 'n', 0, 0, null, 0f,
+				0f, 0f);
+		newUserEvent("AndroidVersion:" + android.os.Build.VERSION.RELEASE, 'n', 0, 0, null,
+				0f, 0f, 0f);
 	}
 
 	// CALL BACK INTERFACE
