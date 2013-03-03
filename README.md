@@ -5,7 +5,7 @@ This is the Android wrapper for GameAnalytics. It allows you to get analytics da
 
 **How it works - a brief description!**
 
-Every time an new event is created, the details are stored in a local SQLite database. In addition, a 'BatchThread' is started if one does not already exist. The 'BatchThread' waits for a specific interval and checks whether an internet connection is available. If so, it takes all the event info collected so far, puts them into JSON arrays and sends them off to the Game Analytics server.
+Every time a new event is created, the details are stored in a local SQLite database. In addition, a 'BatchThread' is started if one does not already exist. The 'BatchThread' waits for a specific interval and checks whether an internet connection is available. If so, it takes all the event info collected so far, puts them into JSON arrays and sends them off to the Game Analytics server.
 
 If no internet connection is available then the thread will quietly poll the connection until it is resumed. As the events are stored in an SQLite database, your event information is safe even if the user resets their device before the connection is restored.
 
@@ -25,8 +25,9 @@ There are two ways to get the wrapper into your application.
 	* Right click on the newly imported project and click Properties -> Android -> check 'Is Library'
 	* Right click on your application that you want to use Sprite Batcher in and click Properties -> Android -> Under libraries click 'add' and select the Android-Sprite-Batcher.
 
-2. Using a JAR:
-	* Simply copy the game-analytics-wrapper-vX.X.jar from the releases folder into the lib folder of your Android project.
+2. Using JARs:
+	* Copy the game-analytics-wrapper-vX.X.jar from the releases folder into the lib folder of your Android project.
+	* Copy the gson-X.X.X.jar from the libs folder into the lib folder of your Android project
 	* *Note: the jar may not be as up-to-date as the code on GitHub. Also you will not have access to the javadoc markup by going this route, whereas if you use the library project you will.*
 
 **Step 3 - Basic setup**
@@ -137,7 +138,7 @@ This will post logs every time an event is created and batched off to the server
 
 **Step 6 - Tips and tricks**
 
-*Parent Activity*
+**Parent Activity**
 Use a parent class that extends Activity to remove the need to put startSession() and stopSession() in every activity's onPause and onResume() methods. The following example is taken from the demo application:
 
 ```java
@@ -161,5 +162,9 @@ public abstract class GameAnalyticsActivity extends Activity {
 
 Then by making all your activities extend GameAnalyticsActivity you can ensure sessions are tracked correctly without having to add the code to each individual class.
 
-*Demo Application*
+**Demo Application**
 Check out the demo application in demo\ to see all of the features of the Android wrapper demonstrated.
+
+**NoClassDefFoundError com.google.gson.Gson**
+
+If you are having this error it is because you don't have access to the GSON class files. You may need to copy gson-X.X.X.jar from the libs folder of the wrapper to your applications libs folder.
