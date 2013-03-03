@@ -74,8 +74,8 @@ public class GameAnalytics {
 	private static String BUILD;
 	private static String AREA;
 	private static int SEND_EVENT_INTERVAL = 20000; // Default is 20 secs
-	private static int NETWORK_POLL_INTERVAL = 20000; // Default is 20 secs
-	private static int SESSION_TIME_OUT = 10000; // Default is 10 secs
+	private static int NETWORK_POLL_INTERVAL = 60000; // Default is 60 secs
+	private static int SESSION_TIME_OUT = 20000; // Default is 20 secs
 
 	// PRECONFIGURED EVENTS
 	private static final String FPS_EVENT_NAME = "FPS";
@@ -87,12 +87,9 @@ public class GameAnalytics {
 	private static Context context;
 	private static boolean initialised = false;
 	private static boolean sessionStarted = false;
-	private static Time sessionEndTime;
+	private static long sessionEndTime;
 	private static long startFpsTime;
 	private static int fpsFrames;
-
-	// TODO: Make a set of new event methods which use activity class name as
-	// 'area'
 
 	/**
 	 * Initialise the GameAnalytics wrapper. It is recommended that you call
@@ -141,8 +138,8 @@ public class GameAnalytics {
 	public static void initialise(Context context, String secretKey,
 			String gameKey, String build) {
 		// Get user id
-		USER_ID = Secure.getString(context.getContentResolver(),
-				Secure.ANDROID_ID);
+		USER_ID = md5(Secure.getString(context.getContentResolver(),
+				Secure.ANDROID_ID));
 		// Set game and secret keys and build
 		SECRET_KEY = secretKey;
 		GAME_KEY = gameKey + "/";
@@ -150,7 +147,6 @@ public class GameAnalytics {
 
 		// Initialise other variables
 		client = new AsyncHttpClient();
-		sessionEndTime = new Time();
 		eventDatabase = new EventDatabase(context);
 
 		// Set boolean initialised, newEvent() can only be called after
@@ -171,16 +167,16 @@ public class GameAnalytics {
 		AREA = context.getClass().toString();
 
 		// Current time:
-		Time now = new Time();
-		now.setToNow();
+		long nowTime = System.currentTimeMillis();
+		
+		sessionStarted = true;
 
 		// Need to get a new sessionId?
 		if (SESSION_ID == null
-				|| (sessionEndTime != null && now.after(sessionEndTime))) {
+				|| (sessionEndTime != 0 && nowTime>sessionEndTime)) {
 			// Set up unique session id
 			SESSION_ID = getSessionId();
 			Log.d("GameAnalytics", "Starting new session");
-			sessionStarted = true;
 
 			// Send off model and OS version
 			sendOffUserStats();
@@ -196,8 +192,7 @@ public class GameAnalytics {
 	 */
 	public static void stopSession() {
 		// sessionTimeOut is some time after now
-		sessionEndTime.setToNow();
-		sessionEndTime.set(sessionEndTime.toMillis(false) + SESSION_TIME_OUT);
+		sessionEndTime = System.currentTimeMillis() + SESSION_TIME_OUT;
 		sessionStarted = false;
 	}
 
@@ -269,7 +264,7 @@ public class GameAnalytics {
 			String area, float x, float y, float z) {
 		if (ready()) {
 			Log.d("GameAnalytics", "New quality event: " + eventId
-					+ ", value: " + message + ", area: " + area + ", pos: ("
+					+ ", message: " + message + ", area: " + area + ", pos: ("
 					+ x + ", " + y + ", " + z + ")");
 			// Ensure we have a BatchThread ready to receive events
 			startThreadIfReq();
@@ -417,7 +412,7 @@ public class GameAnalytics {
 	/**
 	 * If a network is not available GameAnalytics will poll the connection and
 	 * send the events once it is restored. Set the amount of time, in
-	 * milliseconds, between polls. The default is 20 seconds.
+	 * milliseconds, between polls. The default is 60 seconds.
 	 * 
 	 * @param millis
 	 */
@@ -505,6 +500,25 @@ public class GameAnalytics {
 	 */
 	public static void stopLoggingFPS() {
 		stopLoggingFPS(AREA, 0, 0, 0);
+	}
+
+	/**
+	 * Call this method at the same time as initialise() to automatically log
+	 * any unhandled exceptions.
+	 */
+	public static void logUnhandledExceptions() {
+		Thread.currentThread().setUncaughtExceptionHandler(
+				new ExceptionLogger());
+	}
+
+	/**
+	 * Set a custom userId string to be attached to all subsequent events. By
+	 * default, the user ID is generated from the unique Android device ID.
+	 * 
+	 * @param userId
+	 */
+	public static void setUserId(String userId) {
+		USER_ID = userId;
 	}
 
 	private static boolean ready() {
