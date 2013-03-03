@@ -26,7 +26,6 @@ import org.apache.http.message.BasicHeader;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.util.Log;
 import com.google.gson.Gson;
 import com.loopj.twicecircled.android.http.AsyncHttpClient;
 
@@ -61,7 +60,7 @@ public class BatchThread extends Thread {
 	// BatchThread.
 	private boolean sendingEvents = false;
 
-	public BatchThread(Context context, AsyncHttpClient client,
+	protected BatchThread(Context context, AsyncHttpClient client,
 			EventDatabase eventDatabase, String gameKey, String secretKey,
 			int sendEventInterval, int networkPollInterval) {
 		super();
@@ -76,7 +75,7 @@ public class BatchThread extends Thread {
 
 	@Override
 	public void run() {
-		Log.d("GameAnalytics", "BatchThread started");
+		GALog.i("BatchThread started");
 		// Before we send off the events two conditions have to be met:
 		// - Specific time interval passed
 		// - Data connection available
@@ -87,23 +86,23 @@ public class BatchThread extends Thread {
 			try {
 				sleep(endTime - System.currentTimeMillis());
 			} catch (Exception e) {
-				Log.e("GameAnalytics", "Error: " + e.getMessage(), e);
+				GALog.e("Error: " + e.getMessage(), e);
 			}
 		}
-		Log.d("GameAnalytics", "Time interval passed");
+		GALog.i("Time interval passed");
 
 		// Do we have data connection?
 		while (!isNetworkConnected()) {
 			// Intermittently poll until network is reconnected
-			Log.d("GameAnalytics", "Polling network...");
+			GALog.i("Polling network...");
 			try {
 				sleep(networkPollInterval);
 			} catch (Exception e) {
-				Log.e("GameAnalytics", "Error: " + e.getMessage(), e);
+				GALog.e("Error: " + e.getMessage(), e);
 			}
 		}
 
-		Log.d("GameAnalytics", "Network is connected, sending events");
+		GALog.i("Network is connected, sending events");
 		sendingEvents = true;
 		sendEvents();
 	}
@@ -122,31 +121,27 @@ public class BatchThread extends Thread {
 		// Send events if the list is not empty
 		if (!designEvents.isEmpty()) {
 			sendEventSet(gson.toJson(designEvents), GameAnalytics.DESIGN);
-			Log.d("GameAnalytics", "Sending " + designEvents.size()
-					+ " design events.");
+			GALog.i("Sending " + designEvents.size() + " design events.");
 		} else
-			Log.d("GameAnalytics", "No design events to send.");
+			GALog.i("No design events to send.");
 
 		if (!businessEvents.isEmpty()) {
 			sendEventSet(gson.toJson(businessEvents), GameAnalytics.BUSINESS);
-			Log.d("GameAnalytics", "Sending " + businessEvents.size()
-					+ " business events.");
+			GALog.i("Sending " + businessEvents.size() + " business events.");
 		} else
-			Log.d("GameAnalytics", "No business events to send.");
+			GALog.i("No business events to send.");
 
 		if (!qualityEvents.isEmpty()) {
 			sendEventSet(gson.toJson(qualityEvents), GameAnalytics.QUALITY);
-			Log.d("GameAnalytics", "Sending " + qualityEvents.size()
-					+ " quality events.");
+			GALog.i("Sending " + qualityEvents.size() + " quality events.");
 		} else
-			Log.d("GameAnalytics", "No quality events to send.");
+			GALog.i("No quality events to send.");
 
 		if (!userEvents.isEmpty()) {
 			sendEventSet(gson.toJson(userEvents), GameAnalytics.USER);
-			Log.d("GameAnalytics", "Sending " + userEvents.size()
-					+ " user events.");
+			GALog.i("Sending " + userEvents.size() + " user events.");
 		} else
-			Log.d("GameAnalytics", "No user events to send.");
+			GALog.i("No user events to send.");
 	}
 
 	private void sendEventSet(String json, String category) {
@@ -160,9 +155,8 @@ public class BatchThread extends Thread {
 		try {
 			jsonEntity = new StringEntity(json);
 		} catch (UnsupportedEncodingException e) {
-			Log.e("GameAnalytics",
-					"Error converting json String into StringEntity: "
-							+ e.toString(), e);
+			GALog.e("Error converting json String into StringEntity: "
+					+ e.toString(), e);
 		}
 		client.post(context, GameAnalytics.API_URL + gameKey + category,
 				jsonEntity, GameAnalytics.CONTENT_TYPE_JSON, headers,
@@ -173,7 +167,7 @@ public class BatchThread extends Thread {
 		return GameAnalytics.md5(json + secretKey);
 	}
 
-	public boolean isSendingEvents() {
+	protected boolean isSendingEvents() {
 		return sendingEvents;
 	}
 

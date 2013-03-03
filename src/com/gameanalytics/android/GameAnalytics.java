@@ -21,18 +21,17 @@ package com.gameanalytics.android;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import org.apache.http.Header;
 import android.content.Context;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.provider.Settings.Secure;
 import android.text.format.Time;
-import android.util.Log;
-import android.util.EventLogTags.Description;
-
 import com.google.gson.Gson;
 import com.loopj.twicecircled.android.http.AsyncHttpClient;
 import com.loopj.twicecircled.android.http.AsyncHttpResponseHandler;
 
+/**
+ * Public singleton class used to interface with the GameAnalytics servers.
+ */
 public class GameAnalytics {
 
 	// WEBSERVER
@@ -59,6 +58,20 @@ public class GameAnalytics {
 	private static final String METHOD_NOT_SUPPORTED_DESC = "The URI used to post data to the server was incorrect. This could be because the game key supplied the GameAnalytics during initialise() was blank or null.";
 	private static final String INTERNAL_SERVER_ERROR_DESC = "Internal server error. Please bring this error to Game Analytics attention. We are sorry for any inconvenience caused.";
 	private static final String NOT_IMPLEMENTED_DESC = "The used HTTP method is not supported. Please only use the POST method for submitting data.";
+
+	// DEBUGGING
+	/**
+	 * Used as the parameter for setDebugLogLevel(int level). VERBOSE logging
+	 * will post to the debug log when every event is created and batched off to
+	 * the server.
+	 */
+	public static final int VERBOSE = 0;
+	/**
+	 * Used as the parameter for setDebugLogLevel(int level). RELEASE logging
+	 * will only post to the debug logs in the event of a warning or error.
+	 */
+	public static final int RELEASE = 1;
+	protected static int LOGGING = RELEASE;
 
 	// CATEGORIES
 	protected static final String DESIGN = "design";
@@ -112,8 +125,7 @@ public class GameAnalytics {
 			build = context.getPackageManager().getPackageInfo(
 					context.getPackageName(), 0).versionName;
 		} catch (NameNotFoundException e) {
-			Log.w("GameAnalytics",
-					"Warning: android:versionName tag is not set correctly in Android Manifest.");
+			GALog.w("Warning: android:versionName tag is not set correctly in Android Manifest.");
 			build = "unknown";
 		}
 		// Pass on to full initialise method
@@ -168,15 +180,15 @@ public class GameAnalytics {
 
 		// Current time:
 		long nowTime = System.currentTimeMillis();
-		
+
 		sessionStarted = true;
 
 		// Need to get a new sessionId?
 		if (SESSION_ID == null
-				|| (sessionEndTime != 0 && nowTime>sessionEndTime)) {
+				|| (sessionEndTime != 0 && nowTime > sessionEndTime)) {
 			// Set up unique session id
 			SESSION_ID = getSessionId();
-			Log.d("GameAnalytics", "Starting new session");
+			GALog.i("Starting new session");
 
 			// Send off model and OS version
 			sendOffUserStats();
@@ -216,9 +228,9 @@ public class GameAnalytics {
 	public static void newDesignEvent(String eventId, float value, String area,
 			float x, float y, float z) {
 		if (ready()) {
-			Log.d("GameAnalytics", "New design event: " + eventId + ", value: "
-					+ value + ", area: " + area + ", pos: (" + x + ", " + y
-					+ ", " + z + ")");
+			GALog.i("New design event: " + eventId + ", value: " + value
+					+ ", area: " + area + ", pos: (" + x + ", " + y + ", " + z
+					+ ")");
 			// Ensure we have a BatchThread ready to receive events
 			startThreadIfReq();
 
@@ -263,9 +275,9 @@ public class GameAnalytics {
 	public static void newQualityEvent(String eventId, String message,
 			String area, float x, float y, float z) {
 		if (ready()) {
-			Log.d("GameAnalytics", "New quality event: " + eventId
-					+ ", message: " + message + ", area: " + area + ", pos: ("
-					+ x + ", " + y + ", " + z + ")");
+			GALog.i("New quality event: " + eventId + ", message: " + message
+					+ ", area: " + area + ", pos: (" + x + ", " + y + ", " + z
+					+ ")");
 			// Ensure we have a BatchThread ready to receive events
 			startThreadIfReq();
 
@@ -314,8 +326,8 @@ public class GameAnalytics {
 	public static void newUserEvent(String eventId, char gender, int birthYear,
 			int friendCount, String area, float x, float y, float z) {
 		if (ready()) {
-			Log.d("GameAnalytics", "New user event: " + eventId + ", gender: "
-					+ gender + ", birthYear: " + birthYear + ", friendCount: "
+			GALog.i("New user event: " + eventId + ", gender: " + gender
+					+ ", birthYear: " + birthYear + ", friendCount: "
 					+ friendCount + ", area: " + area + ", pos: (" + x + ", "
 					+ y + ", " + z + ")");
 			// Ensure we have a BatchThread ready to receive events
@@ -368,10 +380,9 @@ public class GameAnalytics {
 	public static void newBusinessEvent(String eventId, String currency,
 			int amount, String area, float x, float y, float z) {
 		if (ready()) {
-			Log.d("GameAnalytics", "New business event: " + eventId
-					+ ", currency: " + currency + ", amount: " + amount
-					+ ", area: " + area + ", pos: (" + x + ", " + y + ", " + z
-					+ ")");
+			GALog.i("New business event: " + eventId + ", currency: "
+					+ currency + ", amount: " + amount + ", area: " + area
+					+ ", pos: (" + x + ", " + y + ", " + z + ")");
 			// Ensure we have a BatchThread ready to receive events
 			startThreadIfReq();
 
@@ -404,6 +415,7 @@ public class GameAnalytics {
 	 * being sent. The default is 20 seconds.
 	 * 
 	 * @param millis
+	 *            interval in milliseconds
 	 */
 	public static void setSendEventsInterval(int millis) {
 		SEND_EVENT_INTERVAL = millis;
@@ -415,6 +427,7 @@ public class GameAnalytics {
 	 * milliseconds, between polls. The default is 60 seconds.
 	 * 
 	 * @param millis
+	 *            interval in milliseconds
 	 */
 	public static void setNetworkPollInterval(int millis) {
 		NETWORK_POLL_INTERVAL = millis;
@@ -426,6 +439,7 @@ public class GameAnalytics {
 	 * default is 20 seconds.
 	 * 
 	 * @param millis
+	 *            interval in milliseconds
 	 */
 	public static void setSessionTimeOut(int millis) {
 		SESSION_TIME_OUT = millis;
@@ -480,12 +494,10 @@ public class GameAnalytics {
 					newDesignEvent(FPS_EVENT_NAME, fps, area, x, y, z);
 					startFpsTime = 0;
 				} else {
-					Log.w("GameAnalytics",
-							"Warning: No time elapsed between starting and stopping FPS logging.");
+					GALog.w("Warning: No time elapsed between starting and stopping FPS logging.");
 				}
 			} else {
-				Log.w("GameAnalytics",
-						"Warning: stopLoggingFPS() was called before startLoggingFPS().");
+				GALog.w("Warning: stopLoggingFPS() was called before startLoggingFPS().");
 			}
 		}
 	}
@@ -516,9 +528,27 @@ public class GameAnalytics {
 	 * default, the user ID is generated from the unique Android device ID.
 	 * 
 	 * @param userId
+	 *            Custom unique user ID
 	 */
 	public static void setUserId(String userId) {
 		USER_ID = userId;
+	}
+
+	/**
+	 * Set debug log level. Use GameAnalytics.VERBOSE while you are developing
+	 * to see when every event is created and batched to server. Set to
+	 * GameAnalytics.RELEASE (default) when you release your application so only
+	 * warning and event logs are made.
+	 * 
+	 * @param level
+	 *            Set to either GameAnalytics.VERBOSE or GameAnalytics.RELEASE
+	 */
+	public static void setDebugLogLevel(int level) {
+		if (level == VERBOSE || level == RELEASE) {
+			LOGGING = level;
+		} else {
+			GALog.w("Warning: You should pass in GameAnalytics.VERBOSE or GameAnalytics.RELEASE into GameAnalytics.setLoggingLevel()");
+		}
 	}
 
 	private static boolean ready() {
@@ -526,12 +556,10 @@ public class GameAnalytics {
 			if (sessionStarted) {
 				return true;
 			} else {
-				Log.w("GameAnalytics",
-						"Warning: GameAnalytics session has not started. Call GameAnalytics.startSession(Context context) in onResume().");
+				GALog.w("Warning: GameAnalytics session has not started. Call GameAnalytics.startSession(Context context) in onResume().");
 			}
 		} else {
-			Log.w("GameAnalytics",
-					"Warning: GameAnalytics has not been initialised. Call GameAnalytics.initialise(Context context, String secretKey, String gameKey) first");
+			GALog.w("Warning: GameAnalytics has not been initialised. Call GameAnalytics.initialise(Context context, String secretKey, String gameKey) first");
 		}
 		return false;
 	}
@@ -577,18 +605,18 @@ public class GameAnalytics {
 	protected final static AsyncHttpResponseHandler postResponseHandler = new AsyncHttpResponseHandler() {
 		@Override
 		public void onStart() {
-			Log.d("GameAnalytics", "onStart");
+			GALog.i("onStart");
 		}
 
 		@Override
 		public void onFinish() {
-			Log.d("GameAnalytics", "onFinish");
+			GALog.i("onFinish");
 		}
 
 		@Override
 		public void onSuccess(int statusCode, String content) {
 			// Print response to log
-			Log.d("GameAnalytics", "Succesful response: " + content);
+			GALog.i("Succesful response: " + content);
 		}
 
 		@Override
@@ -599,9 +627,8 @@ public class GameAnalytics {
 			try {
 				errorResponse = gson.fromJson(content, ErrorResponse.class);
 			} catch (Exception e) {
-				Log.e("GameAnalytics",
-						"Error converting failure response from json: "
-								+ content, e);
+				GALog.e("Error converting failure response from json: "
+						+ content, e);
 			}
 
 			if (errorResponse != null) {
@@ -643,18 +670,17 @@ public class GameAnalytics {
 					break;
 				}
 				if (errorDescription != null) {
-					Log.e("GameAnalytics",
-							"Error response code: " + errorResponse.code
-									+ System.getProperty("line.separator")
-									+ errorDescription);
+					GALog.e("Error response code: " + errorResponse.code
+							+ System.getProperty("line.separator")
+							+ errorDescription);
 				} else {
-					Log.d("GameAnalytics", "Code: " + errorResponse.code);
-					Log.d("GameAnalytics", "Message: " + errorResponse.message);
-					Log.e("GameAnalytics", "Unrecognised response code: "
-							+ error.toString(), error);
+					GALog.i("Code: " + errorResponse.code);
+					GALog.i("Message: " + errorResponse.message);
+					GALog.e("Unrecognised response code: " + error.toString(),
+							error);
 				}
 			} else {
-				Log.e("GameAnalytics", "Error: " + error.toString(), error);
+				GALog.e("Error: " + error.toString(), error);
 			}
 		}
 	};

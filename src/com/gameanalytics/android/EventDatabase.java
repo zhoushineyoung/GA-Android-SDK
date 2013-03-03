@@ -1,31 +1,29 @@
-    /* 
-       Game Analytics Android Wrapper
-       Copyright (c) 2013 Tim Wicksteed <tim@twicecircled.com>
-       http:/www.gameanalytics.com
+/* 
+   Game Analytics Android Wrapper
+   Copyright (c) 2013 Tim Wicksteed <tim@twicecircled.com>
+   http:/www.gameanalytics.com
 
-       Licensed under the Apache License, Version 2.0 (the "License");
-       you may not use this file except in compliance with the License.
-       You may obtain a copy of the License at
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-           http://www.apache.org/licenses/LICENSE-2.0
+       http://www.apache.org/licenses/LICENSE-2.0
 
-       Unless required by applicable law or agreed to in writing, software
-       distributed under the License is distributed on an "AS IS" BASIS,
-       WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-       See the License for the specific language governing permissions and
-       limitations under the License.
-    */ 
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
 
 package com.gameanalytics.android;
 
 import java.util.ArrayList;
-
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.util.Log;
 
 public class EventDatabase {
 
@@ -70,7 +68,7 @@ public class EventDatabase {
 			+ BUILD + " text," + EVENT_ID + " text," + AREA + " text," + X
 			+ " num," + Y + " num," + Z + " num," + VALUE + " num," + CURRENCY
 			+ " text," + AMOUNT + " num," + GENDER + " text," + BIRTH_YEAR
-			+ " num," + FRIEND_COUNT + " num" + ");";
+			+ " num," + FRIEND_COUNT + " num," + MESSAGE + " text" + ");";
 
 	// Database operations (SYNCHRONIZED)
 	// The following methods are synchronized so that extra events won't be
@@ -265,7 +263,7 @@ public class EventDatabase {
 		public void onCreate(SQLiteDatabase db) {
 			// Database is created for the first time
 			// Create tables:
-			Log.d("GameAnalytics", "Creating database to store events.");
+			GALog.i("Creating database to store events.");
 			db.execSQL(CREATE_TABLE);
 		}
 
