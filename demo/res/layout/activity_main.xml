@@ -1,0 +1,34 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:layout_gravity="center"
+    android:layout_marginBottom="20dp"
+    android:layout_marginTop="20dp"
+    android:orientation="vertical" >
+
+    <Button
+        android:id="@+id/design"
+        style="@style/LinearLayoutButton"
+        android:onClick="onDesign"
+        android:text="Design Events" />
+
+    <Button
+        android:id="@+id/business"
+        style="@style/LinearLayoutButton"
+        android:onClick="onBusiness"
+        android:text="Business Events" />
+
+    <Button
+        android:id="@+id/user"
+        style="@style/LinearLayoutButton"
+        android:onClick="onUser"
+        android:text="User Events" />
+
+    <Button
+        android:id="@+id/error"
+        style="@style/LinearLayoutButton"
+        android:onClick="onError"
+        android:text="Force Error" />
+
+</LinearLayout>

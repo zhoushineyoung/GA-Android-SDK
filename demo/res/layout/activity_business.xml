@@ -1,0 +1,63 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_marginBottom="10dp"
+    android:layout_marginTop="10dp" >
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:orientation="vertical" >
+
+        <TextView
+            android:id="@+id/money"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right"
+            android:layout_marginRight="10dp"
+            android:text="£50"
+            android:textSize="18sp" />
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/pound_symbol" />
+
+        <LinearLayout style="@style/BuyLayout" >
+
+            <TextView
+                style="@style/BuyTextView"
+                android:text="Tiger Claws - 69p" />
+
+            <Button
+                style="@style/BuyButtons"
+                android:onClick="buyClaws" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/BuyLayout" >
+
+            <TextView
+                style="@style/BuyTextView"
+                android:text="Magic Wand - £1.69" />
+
+            <Button
+                style="@style/BuyButtons"
+                android:onClick="buyWand" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/BuyLayout" >
+
+            <TextView
+                style="@style/BuyTextView"
+                android:text="Life Insurance - £12.99" />
+
+            <Button
+                style="@style/BuyButtons"
+                android:onClick="buyInsurance" />
+        </LinearLayout>
+    </LinearLayout>
+
+</ScrollView>
