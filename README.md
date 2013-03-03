@@ -21,9 +21,9 @@ You can get a copy of the GameAnalytics Android wrapper by either:
 There are two ways to get the wrapper into your application.
 
 1. Using a library project:
-	* Import the entire Game-Analytics-Wrapper project folder into Eclipse using File -> Import -> Existing Android Code Into Workspace.
+	* Import the Game Analytics Wrapper project folder into Eclipse using File -> Import -> Existing Android Code Into Workspace.
 	* Right click on the newly imported project and click Properties -> Android -> check 'Is Library'
-	* Right click on your application that you want to use Sprite Batcher in and click Properties -> Android -> Under libraries click 'add' and select the Android-Sprite-Batcher.
+	* Right click on your application that you want to use Game Analytics with and click Properties -> Android -> Under libraries click 'add' and select the Game-Analytics-Wrapper project.
 
 2. Using JARs:
 	* Copy the game-analytics-wrapper-vX.X.jar from the releases folder into the lib folder of your Android project.
@@ -126,11 +126,11 @@ When no internet connection is available, the wrapper will poll the network conn
 
     GameAnalytics.setNetworkPollInterval(int millis);
 
-After an activity calls stopSession() during its oonPause() method, a session time out is started. If another activity calls onResume() and therefore startSession() within this time out interval then the same gaming session is continued instead of starting a new one. By default this time out interval is 10 seconds. You can change this interval using:
+After an activity calls stopSession() during its onPause() method, a session time out is started. If another activity calls onResume() and therefore startSession() within this time out interval then the same gaming session is continued instead of starting a new one. By default this time out interval is 10 seconds. You can change this interval using:
 
     GameAnalytics.setSessionTimeOut(int millis);
 
-*Custom log level* - By default the Game Analytics wrapper will only to the Android operating system log upon a warning or error. However to help during development it is recommended that you set the log level to VERBOSE with the following line of code:
+**Custom log level** - By default the Game Analytics wrapper will only post to the Android operating system log upon a warning or error. However to help during development it is recommended that you set the log level to VERBOSE with the following line of code:
 
     GameAnalytics.setDebugLogLevel(GameAnalytics.VERBOSE);
 
@@ -138,8 +138,7 @@ This will post logs every time an event is created and batched off to the server
 
 **Step 6 - Tips and tricks**
 
-**Parent Activity**
-Use a parent class that extends Activity to remove the need to put startSession() and stopSession() in every activity's onPause and onResume() methods. The following example is taken from the demo application:
+**Parent Activity** - Use a parent class that extends Activity to remove the need to put startSession() and stopSession() in every activity's onPause and onResume() methods. The following example is taken from the demo application:
 
 ```java
 
@@ -162,9 +161,11 @@ public abstract class GameAnalyticsActivity extends Activity {
 
 Then by making all your activities extend GameAnalyticsActivity you can ensure sessions are tracked correctly without having to add the code to each individual class.
 
-**Demo Application**
-Check out the demo application in demo\ to see all of the features of the Android wrapper demonstrated.
+**Demo Application** - Check out the demo application in demo\ to see all of the features of the Android wrapper demonstrated.
 
-**NoClassDefFoundError com.google.gson.Gson**
+**NoClassDefFoundError com.google.gson.Gson** - If you are having this error it is because you don't have access to the GSON class files. You may need to copy gson-X.X.X.jar from the libs folder of the wrapper to your application's libs folder.
 
-If you are having this error it is because you don't have access to the GSON class files. You may need to copy gson-X.X.X.jar from the libs folder of the wrapper to your applications libs folder.
+Notable Contributions
+=====================
+
+This wrapper uses an altered version of the Android Asynchronous Http Client created by James Smith.
