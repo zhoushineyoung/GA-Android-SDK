@@ -35,34 +35,35 @@ public class EventDatabase {
 
 	// DATABASE SCHEMA
 	// Common
-	public final static String TABLENAME = "events";
-	public final static String ROW_ID = "_id";
-	public final static String TYPE = "type";
-	public final static String USER_ID = "user_id";
-	public final static String SESSION_ID = "session_id";
-	public final static String BUILD = "build";
-	public final static String EVENT_ID = "event_id";
-	public final static String AREA = "area";
-	public final static String X = "x";
-	public final static String Y = "y";
-	public final static String Z = "z";
+	protected final static String TABLENAME = "events";
+	protected final static String ROW_ID = "_id";
+	protected final static String TYPE = "type";
+	protected final static String USER_ID = "user_id";
+	protected final static String SESSION_ID = "session_id";
+	protected final static String BUILD = "build";
+	protected final static String EVENT_ID = "event_id";
+	protected final static String AREA = "area";
+	protected final static String X = "x";
+	protected final static String Y = "y";
+	protected final static String Z = "z";
+	private static int MAXIMUM_EVENT_STORAGE = 0; // Default is 0 (unlimited)
 
 	// Design
-	public final static String VALUE = "value";
+	protected final static String VALUE = "value";
 
 	// Business
-	public final static String CURRENCY = "currency";
-	public final static String AMOUNT = "amount";
+	protected final static String CURRENCY = "currency";
+	protected final static String AMOUNT = "amount";
 
 	// User
-	public final static String GENDER = "gender";
-	public final static String BIRTH_YEAR = "birth_year";
-	public final static String FRIEND_COUNT = "friend_count";
+	protected final static String GENDER = "gender";
+	protected final static String BIRTH_YEAR = "birth_year";
+	protected final static String FRIEND_COUNT = "friend_count";
 
 	// Quality
-	public final static String MESSAGE = "message";
+	protected final static String MESSAGE = "message";
 
-	public final static String CREATE_TABLE = "create table " + TABLENAME
+	protected final static String CREATE_TABLE = "create table " + TABLENAME
 			+ " (" + ROW_ID + " integer primary key autoincrement not null,"
 			+ TYPE + " text," + USER_ID + " text," + SESSION_ID + " text,"
 			+ BUILD + " text," + EVENT_ID + " text," + AREA + " text," + X
@@ -74,7 +75,7 @@ public class EventDatabase {
 	// The following methods are synchronized so that extra events won't be
 	// added to the database while the current lot are being pulled out and
 	// sent.
-	synchronized public ArrayList<?>[] getEvents() {
+	synchronized protected ArrayList<?>[] getEvents() {
 		// Get all events
 		Cursor cursor = db.query(TABLENAME, null, null, null, null, null,
 				ROW_ID);
@@ -151,11 +152,14 @@ public class EventDatabase {
 	}
 
 	synchronized private void insert(ContentValues values) {
-		db.insert(TABLENAME, null, values);
+		if (MAXIMUM_EVENT_STORAGE == 0 || !isFull()) {
+			db.insert(TABLENAME, null, values);
+		}
 	}
 
-	public void addDesignEvent(String userId, String sessionId, String build,
-			String eventId, String area, float x, float y, float z, float value) {
+	protected void addDesignEvent(String userId, String sessionId,
+			String build, String eventId, String area, float x, float y,
+			float z, float value) {
 		final ContentValues values = new ContentValues();
 		values.put(TYPE, GameAnalytics.DESIGN);
 		values.put(USER_ID, userId);
@@ -176,9 +180,9 @@ public class EventDatabase {
 		}.start();
 	}
 
-	public void addBusinessEvent(String userId, String sessionId, String build,
-			String eventId, String area, float x, float y, float z,
-			String currency, int amount) {
+	protected void addBusinessEvent(String userId, String sessionId,
+			String build, String eventId, String area, float x, float y,
+			float z, String currency, int amount) {
 		final ContentValues values = new ContentValues();
 		values.put(TYPE, GameAnalytics.BUSINESS);
 		values.put(USER_ID, userId);
@@ -200,7 +204,7 @@ public class EventDatabase {
 		}.start();
 	}
 
-	public void addUserEvent(String userId, String sessionId, String build,
+	protected void addUserEvent(String userId, String sessionId, String build,
 			String eventId, String area, float x, float y, float z,
 			char gender, int birthYear, int friendCount) {
 		final ContentValues values = new ContentValues();
@@ -225,9 +229,9 @@ public class EventDatabase {
 		}.start();
 	}
 
-	public void addQualityEvent(String userId, String sessionId, String build,
-			String eventId, String area, float x, float y, float z,
-			String message) {
+	protected void addQualityEvent(String userId, String sessionId,
+			String build, String eventId, String area, float x, float y,
+			float z, String message) {
 		final ContentValues values = new ContentValues();
 		values.put(TYPE, GameAnalytics.QUALITY);
 		values.put(USER_ID, userId);
@@ -246,6 +250,24 @@ public class EventDatabase {
 				insert(values);
 			}
 		}.start();
+	}
+
+	private boolean isFull() {
+		Cursor cursor = db.query(TABLENAME, new String[] { ROW_ID }, null,
+				null, null, null, null);
+		if (cursor.getCount() >= MAXIMUM_EVENT_STORAGE) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	protected void setMaximumEventStorage(int maximumEventStorage) {
+		MAXIMUM_EVENT_STORAGE = maximumEventStorage;
+	}
+
+	protected void clear() {
+		db.delete(TABLENAME, null, null);
 	}
 
 	// OPENHELPER CLASS

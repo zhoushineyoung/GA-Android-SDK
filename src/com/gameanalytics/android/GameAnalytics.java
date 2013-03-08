@@ -94,15 +94,17 @@ public class GameAnalytics {
 	private static final String FPS_EVENT_NAME = "FPS";
 
 	// OTHER
-	private static AsyncHttpClient client;
-	private static BatchThread currentThread;
-	private static EventDatabase eventDatabase;
-	private static Context context;
-	private static boolean initialised = false;
-	private static boolean sessionStarted = false;
-	private static long sessionEndTime;
-	private static long startFpsTime;
-	private static int fpsFrames;
+	private static AsyncHttpClient CLIENT;
+	private static BatchThread CURRENT_THREAD;
+	private static EventDatabase EVENT_DATABASE;
+	private static Context CONTEXT;
+	private static boolean INITIALISED = false;
+	private static boolean SESSION_STARTED = false;
+	private static boolean CACHE_LOCALLY = true;
+	private static boolean AUTO_BATCH = true;
+	private static long SESSION_END_TIME;
+	private static long START_FPS_TIME;
+	private static int FPS_FRAMES;
 
 	/**
 	 * Initialise the GameAnalytics wrapper. It is recommended that you call
@@ -158,12 +160,12 @@ public class GameAnalytics {
 		BUILD = build;
 
 		// Initialise other variables
-		client = new AsyncHttpClient();
-		eventDatabase = new EventDatabase(context);
+		CLIENT = new AsyncHttpClient();
+		EVENT_DATABASE = new EventDatabase(context);
 
 		// Set boolean initialised, newEvent() can only be called after
 		// initialise() and startSession()
-		initialised = true;
+		INITIALISED = true;
 	}
 
 	/**
@@ -175,17 +177,17 @@ public class GameAnalytics {
 	 */
 	public static void startSession(Context context) {
 		// Update current context
-		GameAnalytics.context = context;
+		CONTEXT = context;
 		AREA = context.getClass().toString();
 
 		// Current time:
 		long nowTime = System.currentTimeMillis();
 
-		sessionStarted = true;
+		SESSION_STARTED = true;
 
 		// Need to get a new sessionId?
 		if (SESSION_ID == null
-				|| (sessionEndTime != 0 && nowTime > sessionEndTime)) {
+				|| (SESSION_END_TIME != 0 && nowTime > SESSION_END_TIME)) {
 			// Set up unique session id
 			SESSION_ID = getSessionId();
 			GALog.i("Starting new session");
@@ -199,13 +201,13 @@ public class GameAnalytics {
 	 * Call this method in every activity's onPause() method to ensure correct
 	 * session logging.
 	 * 
-	 * @param context
+	 * @param CONTEXT
 	 *            the calling activity
 	 */
 	public static void stopSession() {
 		// sessionTimeOut is some time after now
-		sessionEndTime = System.currentTimeMillis() + SESSION_TIME_OUT;
-		sessionStarted = false;
+		SESSION_END_TIME = System.currentTimeMillis() + SESSION_TIME_OUT;
+		SESSION_STARTED = false;
 	}
 
 	/**
@@ -235,7 +237,7 @@ public class GameAnalytics {
 			startThreadIfReq();
 
 			// Add design event to batch stack
-			eventDatabase.addDesignEvent(USER_ID, SESSION_ID, BUILD, eventId,
+			EVENT_DATABASE.addDesignEvent(USER_ID, SESSION_ID, BUILD, eventId,
 					area, x, y, z, value);
 		}
 	}
@@ -282,7 +284,7 @@ public class GameAnalytics {
 			startThreadIfReq();
 
 			// Add quality event to batch stack
-			eventDatabase.addQualityEvent(USER_ID, SESSION_ID, BUILD, eventId,
+			EVENT_DATABASE.addQualityEvent(USER_ID, SESSION_ID, BUILD, eventId,
 					area, x, y, z, message);
 		}
 	}
@@ -334,7 +336,7 @@ public class GameAnalytics {
 			startThreadIfReq();
 
 			// Add user event to batch stack
-			eventDatabase.addUserEvent(USER_ID, SESSION_ID, BUILD, eventId,
+			EVENT_DATABASE.addUserEvent(USER_ID, SESSION_ID, BUILD, eventId,
 					area, x, y, z, gender, birthYear, friendCount);
 		}
 	}
@@ -387,8 +389,8 @@ public class GameAnalytics {
 			startThreadIfReq();
 
 			// Add business event to batch stack
-			eventDatabase.addBusinessEvent(USER_ID, SESSION_ID, BUILD, eventId,
-					area, x, y, z, currency, amount);
+			EVENT_DATABASE.addBusinessEvent(USER_ID, SESSION_ID, BUILD,
+					eventId, area, x, y, z, currency, amount);
 
 		}
 	}
@@ -455,12 +457,12 @@ public class GameAnalytics {
 	 */
 	public static void logFPS() {
 		// Have we already started logging FPS?
-		if (startFpsTime == 0) {
+		if (START_FPS_TIME == 0) {
 			// No, start logging
-			startFpsTime = System.currentTimeMillis();
+			START_FPS_TIME = System.currentTimeMillis();
 		} else {
 			// Increment number of frames
-			fpsFrames++;
+			FPS_FRAMES++;
 		}
 	}
 
@@ -484,15 +486,15 @@ public class GameAnalytics {
 	public static void stopLoggingFPS(String area, float x, float y, float z) {
 		if (ready()) {
 			// Ensure we are logging FPS?
-			if (startFpsTime != 0) {
+			if (START_FPS_TIME != 0) {
 				// Get elapsed time
-				long elapsed = System.currentTimeMillis() - startFpsTime;
+				long elapsed = System.currentTimeMillis() - START_FPS_TIME;
 
 				if (elapsed != 0) {
 					// Work out average FPS and send
-					int fps = (int) (fpsFrames * 1000 / elapsed);
+					int fps = (int) (FPS_FRAMES * 1000 / elapsed);
 					newDesignEvent(FPS_EVENT_NAME, fps, area, x, y, z);
-					startFpsTime = 0;
+					START_FPS_TIME = 0;
 				} else {
 					GALog.w("Warning: No time elapsed between starting and stopping FPS logging.");
 				}
@@ -551,9 +553,56 @@ public class GameAnalytics {
 		}
 	}
 
+	/**
+	 * Enable/disable local caching. By default (true) events are cached locally
+	 * so that even if an internet connection is not available, they will be
+	 * sent to the GA server when it is restored. If disabled (false) events
+	 * will be discarded if a connection is unavailable.
+	 * 
+	 * @param value
+	 *            true = enabled; false = disabled
+	 */
+	public static void setLocalCaching(boolean value) {
+		CACHE_LOCALLY = value;
+	}
+
+	/**
+	 * Enable/disable automatic batching. By default (true) events are sent off
+	 * to the GA server after a time interval set using setSendEventsInterval().
+	 * If disabled (false) then you will need to use manualBatch() to send the
+	 * events to the server.
+	 * 
+	 * @param value
+	 *            true = enabled; false = disabled
+	 */
+	public static void setAutoBatch(boolean value) {
+		AUTO_BATCH = false;
+	}
+
+	/**
+	 * Set maximum number of events that are stored locally. Additional events
+	 * will be discarded. Set to 0 for unlimited (default).
+	 * 
+	 * @param max
+	 *            maximum number of events that can be stored
+	 */
+	public static void setMaximumEventStorage(int max) {
+		EVENT_DATABASE.setMaximumEventStorage(max);
+	}
+
+	public static void manualBatch() {
+		// Create a special BatchThread just to send events. This event will not
+		// wait for the sendEventInterval nor will it poll the internet
+		// connection. If there is no connection it will simply return.
+		BatchThread sendEventThread = new BatchThread(CONTEXT, CLIENT,
+				EVENT_DATABASE, GAME_KEY, SECRET_KEY, SEND_EVENT_INTERVAL,
+				NETWORK_POLL_INTERVAL, CACHE_LOCALLY);
+		sendEventThread.manualBatch();
+	}
+
 	private static boolean ready() {
-		if (initialised) {
-			if (sessionStarted) {
+		if (INITIALISED) {
+			if (SESSION_STARTED) {
 				return true;
 			} else {
 				GALog.w("Warning: GameAnalytics session has not started. Call GameAnalytics.startSession(Context context) in onResume().");
@@ -586,11 +635,15 @@ public class GameAnalytics {
 	}
 
 	private static void startThreadIfReq() {
-		if (currentThread == null || currentThread.isSendingEvents()) {
-			currentThread = new BatchThread(context, client, eventDatabase,
+		// Only start new thread if current thread is null or already sending
+		// events
+		// AND auto-batch is switched on.
+		if ((CURRENT_THREAD == null || CURRENT_THREAD.shouldStartNewThread())
+				&& AUTO_BATCH) {
+			CURRENT_THREAD = new BatchThread(CONTEXT, CLIENT, EVENT_DATABASE,
 					GAME_KEY, SECRET_KEY, SEND_EVENT_INTERVAL,
-					NETWORK_POLL_INTERVAL);
-			currentThread.start();
+					NETWORK_POLL_INTERVAL, CACHE_LOCALLY);
+			CURRENT_THREAD.start();
 		}
 	}
 

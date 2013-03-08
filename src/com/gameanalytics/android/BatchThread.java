@@ -55,14 +55,16 @@ public class BatchThread extends Thread {
 	private Context context;
 	private AsyncHttpClient client;
 	private EventDatabase eventDatabase;
+	private boolean cacheLocally;
+	private boolean pollNetwork = true;
 
 	// Once this is set to true, all further events will be send off by the next
 	// BatchThread.
-	private boolean sendingEvents = false;
+	private boolean startNewThread = false;
 
 	protected BatchThread(Context context, AsyncHttpClient client,
 			EventDatabase eventDatabase, String gameKey, String secretKey,
-			int sendEventInterval, int networkPollInterval) {
+			int sendEventInterval, int networkPollInterval, boolean cacheLocally) {
 		super();
 		this.context = context;
 		this.client = client;
@@ -71,6 +73,7 @@ public class BatchThread extends Thread {
 		this.secretKey = secretKey;
 		this.sendEventInterval = sendEventInterval;
 		this.networkPollInterval = networkPollInterval;
+		this.cacheLocally = cacheLocally;
 	}
 
 	@Override
@@ -89,7 +92,26 @@ public class BatchThread extends Thread {
 				GALog.e("Error: " + e.getMessage(), e);
 			}
 		}
-		GALog.i("Time interval passed");
+		if (sendEventInterval > 0) {
+			GALog.i("Time interval passed");
+		} // Otherwise there is no interval so thread continues immediately
+
+		// Is cache locally enabled?
+		if (!cacheLocally && !isNetworkConnected()) {
+			// Wipe database
+			GALog.i("No network available, clearing events");
+			eventDatabase.clear();
+			// Don't bother polling network
+			startNewThread = true;
+			return;
+		}
+
+		// Is network polling disabled
+		if (!pollNetwork && !isNetworkConnected()) {
+			GALog.i("No network available");
+			startNewThread = true;
+			return;
+		}
 
 		// Do we have data connection?
 		while (!isNetworkConnected()) {
@@ -103,7 +125,7 @@ public class BatchThread extends Thread {
 		}
 
 		GALog.i("Network is connected, sending events");
-		sendingEvents = true;
+		startNewThread = true;
 		sendEvents();
 	}
 
@@ -167,8 +189,8 @@ public class BatchThread extends Thread {
 		return GameAnalytics.md5(json + secretKey);
 	}
 
-	protected boolean isSendingEvents() {
-		return sendingEvents;
+	protected boolean shouldStartNewThread() {
+		return startNewThread;
 	}
 
 	private boolean isNetworkConnected() {
@@ -176,5 +198,13 @@ public class BatchThread extends Thread {
 				.getSystemService(Context.CONNECTIVITY_SERVICE);
 		NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
 		return (networkInfo != null && networkInfo.isConnected());
+	}
+
+	protected void manualBatch() {
+		// The manual batch is simply a normal BatchThread but it doesn't wait
+		// to send the events and doesn't poll the internet.
+		sendEventInterval = 0;
+		pollNetwork = false;
+		start();
 	}
 }

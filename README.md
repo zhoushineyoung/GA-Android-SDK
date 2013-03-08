@@ -136,6 +136,22 @@ After an activity calls stopSession() during its onPause() method, a session tim
 
 This will post logs every time an event is created and batched off to the server. *Place this before you call initialise() to ensure you see all logs.*
 
+**Local Caching** - By default the Game Analytics wrapper will cache events locally when an internet connection is not available. The events will be sent once the connection is restored. Use the following code to disable this behaviour, events will be discarded if an internet connection is unavailable:
+
+    GameAnalytics.setLocalCaching(false);
+
+**Automatic Batching** - By default the Game Analytics wrapper will send events to the server in batches after a specific time interval. Use the following code to disable this behaviour:
+
+    GameAnalytics.setAutoBatch(false);
+
+... and use the following to send events to the GA server manually.
+
+    GameAnalytics.manualBatch();
+
+**Event capacity** - By default the local database will hold an unlimited number of events between sending batches to the server. Use the following code to set a specific event capacity. Additional events will be discarded:
+
+    GameAnalytics.setMaximumEventStorage(capacity);
+
 **Step 6 - Tips and tricks**
 
 **Parent Activity** - Use a parent class that extends Activity to remove the need to put startSession() and stopSession() in every activity's onPause and onResume() methods. The following example is taken from the demo application:
