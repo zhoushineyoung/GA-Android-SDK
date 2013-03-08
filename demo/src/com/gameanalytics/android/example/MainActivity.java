@@ -35,6 +35,7 @@ public class MainActivity extends Activity {
 		GameAnalytics.setNetworkPollInterval(30000);
 		GameAnalytics.setSendEventsInterval(10000);
 		GameAnalytics.setSessionTimeOut(10000);
+
 	}
 
 	public void onDesign(View v) {

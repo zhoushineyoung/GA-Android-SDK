@@ -11,7 +11,7 @@ public class GAIcon {
 	private int randomSpeed = 8;
 	private int minSpeed = 5;
 	private int drawable = R.drawable.icon;
-	private Rect sourceRect = new Rect(0, 0, 92, 90);
+	private Rect sourceRect = new Rect(0, 0, 128, 128);
 	private int x;
 	private int y;
 	private int speedX;
