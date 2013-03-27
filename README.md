@@ -181,6 +181,8 @@ Then by making all your activities extend GameAnalyticsActivity you can ensure s
 
 **NoClassDefFoundError com.google.gson.Gson** - If you are having this error it is because you don't have access to the GSON class files. You may need to copy gson-X.X.X.jar from the libs folder of the wrapper to your application's libs folder.
 
+**Have you called startSession(Context) in onResume()** - If you are getting this warning message even though you already do call startSession() in onResume() then it means you are trying to create events between the last activity's onPause and the new activity's onResume(). E.g. you may be creating events in onCreate() of the new activity which will proceed the onResume() call. You can solve this by simply calling startSession() in onCreate too. It doesn't matter if it's called twice, the sessions will still be logged correctly.
+
 Notable Contributions
 =====================
 
