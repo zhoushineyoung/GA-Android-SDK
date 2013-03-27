@@ -124,19 +124,19 @@ public class EventDatabase {
 				} else if (type.equals(GameAnalytics.BUSINESS)) {
 					currency = cursor.getString(11);
 					amount = cursor.getInt(12);
-					businessEvents.add(new BusinessEvent(USER_ID, SESSION_ID,
-							BUILD, eventId, area, x, y, z, currency, amount));
+					businessEvents.add(new BusinessEvent(userId, sessionId,
+							build, eventId, area, x, y, z, currency, amount));
 				} else if (type.equals(GameAnalytics.USER)) {
 					gender = cursor.getString(13).toCharArray()[0];
 					birthYear = cursor.getInt(14);
 					friendCount = cursor.getInt(15);
-					userEvents.add(new UserEvent(USER_ID, SESSION_ID, BUILD,
+					userEvents.add(new UserEvent(userId, sessionId, build,
 							eventId, area, x, y, z, gender, birthYear,
 							friendCount));
 				} else if (type.equals(GameAnalytics.QUALITY)) {
 					message = cursor.getString(16);
-					qualityEvents.add(new QualityEvent(USER_ID, SESSION_ID,
-							BUILD, eventId, area, x, y, z, message));
+					qualityEvents.add(new QualityEvent(userId, sessionId,
+							build, eventId, area, x, y, z, message));
 				}
 				cursor.moveToNext();
 			}
