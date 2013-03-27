@@ -142,31 +142,35 @@ public class BatchThread extends Thread {
 		Gson gson = new Gson();
 		// Send events if the list is not empty
 		if (!designEvents.isEmpty()) {
-			sendEventSet(gson.toJson(designEvents), GameAnalytics.DESIGN);
 			GALog.i("Sending " + designEvents.size() + " design events.");
+			sendEventSet(gson.toJson(designEvents), GameAnalytics.DESIGN);
 		} else
 			GALog.i("No design events to send.");
 
 		if (!businessEvents.isEmpty()) {
-			sendEventSet(gson.toJson(businessEvents), GameAnalytics.BUSINESS);
 			GALog.i("Sending " + businessEvents.size() + " business events.");
+			sendEventSet(gson.toJson(businessEvents), GameAnalytics.BUSINESS);
 		} else
 			GALog.i("No business events to send.");
 
 		if (!qualityEvents.isEmpty()) {
-			sendEventSet(gson.toJson(qualityEvents), GameAnalytics.QUALITY);
 			GALog.i("Sending " + qualityEvents.size() + " quality events.");
+			sendEventSet(gson.toJson(qualityEvents), GameAnalytics.QUALITY);
 		} else
 			GALog.i("No quality events to send.");
 
 		if (!userEvents.isEmpty()) {
-			sendEventSet(gson.toJson(userEvents), GameAnalytics.USER);
 			GALog.i("Sending " + userEvents.size() + " user events.");
+			sendEventSet(gson.toJson(userEvents), GameAnalytics.USER);
 		} else
 			GALog.i("No user events to send.");
 	}
 
 	private void sendEventSet(String json, String category) {
+		// Print response if in VERBOSE mode
+		GALog.i("Raw JSON for " + category
+				+ " events being sent to GA server: " + json);
+
 		// Add auth header
 		Header[] headers = new Header[1];
 		headers[0] = new BasicHeader(GameAnalytics.AUTHORIZATION,
