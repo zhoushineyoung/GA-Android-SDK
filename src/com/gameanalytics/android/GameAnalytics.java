@@ -626,7 +626,16 @@ public class GameAnalytics {
 		try {
 			digest = MessageDigest.getInstance("MD5");
 			digest.update(s.getBytes(), 0, s.length());
-			String hash = new BigInteger(1, digest.digest()).toString(16);
+			byte[] byteArray = digest.digest();
+			/* Convert byte array to hex string:
+			 * .add(...) adds one to the beginning of the BigInteger
+			 * representation of our byte array. Then .substring(1) removes it.
+			 * This stops leading zeros being dropped when converting from
+			 * BigInteger to hex string.
+			 */ 
+			String hash = (new BigInteger(1, byteArray).add(BigInteger.ONE
+					.shiftLeft(8 * byteArray.length))).toString(16)
+					.substring(1);
 			return hash;
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
