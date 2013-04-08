@@ -18,6 +18,7 @@
 
 package com.gameanalytics.android;
 
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -625,20 +626,23 @@ public class GameAnalytics {
 		MessageDigest digest;
 		try {
 			digest = MessageDigest.getInstance("MD5");
-			digest.update(s.getBytes(), 0, s.length());
+			digest.update(s.getBytes("ISO-8859-1"), 0, s.length());
 			byte[] byteArray = digest.digest();
-			/* Convert byte array to hex string:
-			 * .add(...) adds one to the beginning of the BigInteger
-			 * representation of our byte array. Then .substring(1) removes it.
-			 * This stops leading zeros being dropped when converting from
-			 * BigInteger to hex string.
-			 */ 
+			/*
+			 * Convert byte array to hex string: .add(...) adds one to the
+			 * beginning of the BigInteger representation of our byte array.
+			 * Then .substring(1) removes it. This stops leading zeros being
+			 * dropped when converting from BigInteger to hex string.
+			 */
 			String hash = (new BigInteger(1, byteArray).add(BigInteger.ONE
 					.shiftLeft(8 * byteArray.length))).toString(16)
 					.substring(1);
 			return hash;
 		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
+			GALog.e("NoSuchAlgorithmException when making authorization hash.",e);
+			return null;
+		} catch (UnsupportedEncodingException e) {
+			GALog.e("UnsupportedEncodingException when making authorization hash.",e);
 			return null;
 		}
 	}
