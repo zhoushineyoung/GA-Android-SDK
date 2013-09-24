@@ -93,6 +93,10 @@ public class GameAnalytics {
 
 	// PRECONFIGURED EVENTS
 	private static final String FPS_EVENT_NAME = "FPS";
+	private static final String USER_INFO_EVENT_NAME = "userInfo";
+	private static final String REFERRAL_EVENT_NAME = "referral";
+	private static final String ANDROID = "Android";
+	private static final String SDK_VERSION = "GA Android SDK 1.10";
 
 	// OTHER
 	private static AsyncHttpClient CLIENT;
@@ -167,6 +171,24 @@ public class GameAnalytics {
 		// Set boolean initialised, newEvent() can only be called after
 		// initialise() and startSession()
 		INITIALISED = true;
+	}
+
+	/**
+	 * Checks whether Game Analytics has been initialised.
+	 * 
+	 * @return true if initialised, otherwise false
+	 */
+	public static boolean isInitialised() {
+		return INITIALISED;
+	}
+
+	/**
+	 * Checks whether a Game Analytics session has been started.
+	 * 
+	 * @return true if session started, otherwise false
+	 */
+	public static boolean isSessionStarted() {
+		return SESSION_STARTED;
 	}
 
 	/**
@@ -305,12 +327,66 @@ public class GameAnalytics {
 		newQualityEvent(eventId, message, AREA, 0, 0, 0);
 	}
 
+	// This is the privately accessible method to send all user event data.
+	// Developers should use the following publically available ones:
+	// 1. setUserInfo(char gender, int birthYear, int friendCount)
+	// 2. setReferralInfo(String installPublisher, String installSite, String
+	// installCampaign, String installAd, String installKeyword)
+	private static void newUserEvent(String eventId, char gender,
+			int birthYear, int friendCount, String area, float x, float y,
+			float z, String platform, String device, String osMajor,
+			String osMinor, String sdkVersion, String installPublisher,
+			String installSite, String installCampaign, String installAd,
+			String installKeyword) {
+		if (ready()) {
+			GALog.i("New user event: " + eventId + ", gender: " + gender
+					+ ", birthYear: " + birthYear + ", friendCount: "
+					+ friendCount + ", area: " + area + ", pos: (" + x + ", "
+					+ y + ", " + z + ", " + platform + ", " + device + ", "
+					+ osMajor + ", " + osMinor + ", " + sdkVersion + ", "
+					+ installPublisher + ", " + installSite + ", "
+					+ installCampaign + ", " + installAd + ", "
+					+ installKeyword + ")");
+			// Ensure we have a BatchThread ready to receive events
+			startThreadIfReq();
+
+			// Add user event to batch stack
+			EVENT_DATABASE.addUserEvent(USER_ID, SESSION_ID, BUILD, eventId,
+					area, x, y, z, gender, birthYear, friendCount, platform,
+					device, osMajor, osMinor, sdkVersion, installPublisher,
+					installSite, installCampaign, installAd, installKeyword);
+		}
+	}
+
 	/**
-	 * Add a new quality event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setTimeInterval().
+	 * Add a new user event to the event stack. This will be sent off in a
+	 * batched array after the time interval set using setTimeInterval(). The
+	 * current activity will be used as the 'area' value for the event.
 	 * 
 	 * @param eventId
-	 *            use colons to denote subtypes, e.g. 'PlaytimeMilestone:5hours'
+	 *            use colons to denote subtypes
+	 * @param gender
+	 *            user gender, use 'm' for male, 'f' for female
+	 * @param birthYear
+	 *            four digit birth year
+	 * @param friendCount
+	 *            number of friends
+	 * 
+	 * @deprecated use {@link setUserInfo()} instead.
+	 */
+	public static void sendUserEvent(String eventId, char gender,
+			int birthYear, int friendCount) {
+		newUserEvent(eventId, gender, birthYear, friendCount, AREA, 0, 0, 0,
+				null, null, null, null, null, null, null, null, null, null);
+	}
+
+	/**
+	 * Add a new user event to the event stack. This will be sent off in a
+	 * batched array after the time interval set using setTimeInterval(). The
+	 * current activity will be used as the 'area' value for the event.
+	 * 
+	 * @param eventId
+	 *            use colons to denote subtypes
 	 * @param gender
 	 *            user gender, use 'm' for male, 'f' for female
 	 * @param birthYear
@@ -325,30 +401,19 @@ public class GameAnalytics {
 	 *            position on y-axis
 	 * @param z
 	 *            position on z-axis
+	 * 
+	 * @deprecated use {@link setUserInfo()} instead.
 	 */
-	public static void newUserEvent(String eventId, char gender, int birthYear,
-			int friendCount, String area, float x, float y, float z) {
-		if (ready()) {
-			GALog.i("New user event: " + eventId + ", gender: " + gender
-					+ ", birthYear: " + birthYear + ", friendCount: "
-					+ friendCount + ", area: " + area + ", pos: (" + x + ", "
-					+ y + ", " + z + ")");
-			// Ensure we have a BatchThread ready to receive events
-			startThreadIfReq();
-
-			// Add user event to batch stack
-			EVENT_DATABASE.addUserEvent(USER_ID, SESSION_ID, BUILD, eventId,
-					area, x, y, z, gender, birthYear, friendCount);
-		}
+	public static void sendUserEvent(String eventId, char gender,
+			int birthYear, int friendCount, String area, float x, float y,
+			float z) {
+		newUserEvent(eventId, gender, birthYear, friendCount, area, x, y, z,
+				null, null, null, null, null, null, null, null, null, null);
 	}
 
 	/**
-	 * Add a new quality event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setTimeInterval(). The
-	 * current activity will be used as the 'area' value for the event.
+	 * Send user info to the Game Analytics server.
 	 * 
-	 * @param eventId
-	 *            use colons to denote subtypes, e.g. 'PlaytimeMilestone:5hours'
 	 * @param gender
 	 *            user gender, use 'm' for male, 'f' for female
 	 * @param birthYear
@@ -356,9 +421,35 @@ public class GameAnalytics {
 	 * @param friendCount
 	 *            number of friends
 	 */
-	public static void newUserEvent(String eventId, char gender, int birthYear,
-			int friendCount) {
-		newUserEvent(eventId, gender, birthYear, friendCount, AREA, 0, 0, 0);
+	public static void setUserInfo(char gender, int birthYear, int friendCount) {
+		newUserEvent(USER_INFO_EVENT_NAME, gender, birthYear, friendCount,
+				AREA, 0, 0, 0, null, null, null, null, null, null, null, null,
+				null, null);
+	}
+
+	/**
+	 * Manually send referral info to the Game Analytics server.
+	 * 
+	 * For automatic referrals, extend ReferralReceiver class set up as
+	 * broadcast receiver in Android Manifest.
+	 * 
+	 * @param installPublisher
+	 *            e.g. FB, Chartboost, Google Adwords, Organic
+	 * @param installSite
+	 *            e.g. FB.com, FBApp, AppId
+	 * @param installCampaign
+	 *            e.g. Launch, EasterBoost, ChrismasSpecial
+	 * @param installAd
+	 *            e.g. Add#239823, KnutsShinyAd
+	 * @param installKeyword
+	 *            e.g. rts mobile game
+	 */
+	public static void setReferralInfo(String installPublisher,
+			String installSite, String installCampaign, String installAd,
+			String installKeyword) {
+		newUserEvent(USER_INFO_EVENT_NAME, 'n', 0, 0, AREA, 0, 0, 0, null,
+				null, null, null, null, installPublisher, installSite,
+				installCampaign, installAd, installKeyword);
 	}
 
 	/**
@@ -591,10 +682,12 @@ public class GameAnalytics {
 		EVENT_DATABASE.setMaximumEventStorage(max);
 	}
 
+	/**
+	 * 	Create a special BatchThread just to send events. This event will not
+	 *	wait for the sendEventInterval nor will it poll the internet
+	 *	connection. If there is no connection it will simply return.
+	 */
 	public static void manualBatch() {
-		// Create a special BatchThread just to send events. This event will not
-		// wait for the sendEventInterval nor will it poll the internet
-		// connection. If there is no connection it will simply return.
 		BatchThread sendEventThread = new BatchThread(CONTEXT, CLIENT,
 				EVENT_DATABASE, GAME_KEY, SECRET_KEY, SEND_EVENT_INTERVAL,
 				NETWORK_POLL_INTERVAL, CACHE_LOCALLY);
@@ -639,10 +732,12 @@ public class GameAnalytics {
 					.substring(1);
 			return hash;
 		} catch (NoSuchAlgorithmException e) {
-			GALog.e("NoSuchAlgorithmException when making authorization hash.",e);
+			GALog.e("NoSuchAlgorithmException when making authorization hash.",
+					e);
 			return null;
 		} catch (UnsupportedEncodingException e) {
-			GALog.e("UnsupportedEncodingException when making authorization hash.",e);
+			GALog.e("UnsupportedEncodingException when making authorization hash.",
+					e);
 			return null;
 		}
 	}
@@ -661,10 +756,17 @@ public class GameAnalytics {
 	}
 
 	private static void sendOffUserStats() {
-		newUserEvent("Model:" + android.os.Build.MODEL, 'n', 0, 0, null, 0f,
-				0f, 0f);
-		newUserEvent("AndroidVersion:" + android.os.Build.VERSION.RELEASE, 'n',
-				0, 0, null, 0f, 0f, 0f);
+		// For developer
+		int memory = Math.round(Runtime.getRuntime().maxMemory() / 1000000);
+		newQualityEvent("Model:" + android.os.Build.MODEL, "Max memory = "
+				+ memory + " mb");
+		newQualityEvent("AndroidVersion:" + android.os.Build.VERSION.RELEASE,
+				"");
+
+		// For GA
+		newUserEvent(USER_INFO_EVENT_NAME, 'n', 0, 0, AREA, 0, 0, 0, ANDROID,
+				android.os.Build.MODEL, null, android.os.Build.VERSION.RELEASE,
+				SDK_VERSION, null, null, null, null, null);
 	}
 
 	// CALL BACK INTERFACE

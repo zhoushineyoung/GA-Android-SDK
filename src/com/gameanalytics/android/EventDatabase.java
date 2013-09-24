@@ -60,6 +60,18 @@ public class EventDatabase {
 	protected final static String BIRTH_YEAR = "birth_year";
 	protected final static String FRIEND_COUNT = "friend_count";
 
+	// Optional user events added in V1.10
+	protected final static String PLATFORM = "platform";
+	protected final static String DEVICE = "device";
+	protected final static String OS_MAJOR = "os_major";
+	protected final static String OS_MINOR = "os_minor";
+	protected final static String SDK_VERSION = "sdk_version";
+	protected final static String INSTALL_PUBLISHER = "install_publisher";
+	protected final static String INSTALL_SITE = "install_site";
+	protected final static String INSTALL_CAMPAIGN = "install_campaign";
+	protected final static String INSTALL_AD = "install_ad";
+	protected final static String INSTALL_KEYWORD = "install_keyword";
+
 	// Quality
 	protected final static String MESSAGE = "message";
 
@@ -69,7 +81,11 @@ public class EventDatabase {
 			+ BUILD + " text," + EVENT_ID + " text," + AREA + " text," + X
 			+ " num," + Y + " num," + Z + " num," + VALUE + " num," + CURRENCY
 			+ " text," + AMOUNT + " num," + GENDER + " text," + BIRTH_YEAR
-			+ " num," + FRIEND_COUNT + " num," + MESSAGE + " text" + ");";
+			+ " num," + FRIEND_COUNT + " num," + MESSAGE + " text," + PLATFORM
+			+ " text," + DEVICE + " text," + OS_MAJOR + " text," + OS_MINOR
+			+ " text," + SDK_VERSION + " text," + INSTALL_PUBLISHER + " text,"
+			+ INSTALL_SITE + " text," + INSTALL_CAMPAIGN + " text,"
+			+ INSTALL_AD + " text," + INSTALL_KEYWORD + " text" + ");";
 
 	// Database operations (SYNCHRONIZED)
 	// The following methods are synchronized so that extra events won't be
@@ -103,6 +119,16 @@ public class EventDatabase {
 		int birthYear;
 		int friendCount;
 		String message;
+		String platform;
+		String device;
+		String osMajor;
+		String osMinor;
+		String sdkVersion;
+		String installPublisher;
+		String installSite;
+		String installCampaign;
+		String installAd;
+		String installKeyword;
 
 		// Populate ArrayLists
 		if (cursor.moveToFirst()) {
@@ -130,9 +156,21 @@ public class EventDatabase {
 					gender = cursor.getString(13).toCharArray()[0];
 					birthYear = cursor.getInt(14);
 					friendCount = cursor.getInt(15);
+					platform = cursor.getString(17);
+					device = cursor.getString(18);
+					osMajor = cursor.getString(19);
+					osMinor = cursor.getString(20);
+					sdkVersion = cursor.getString(21);
+					installPublisher = cursor.getString(22);
+					installSite = cursor.getString(23);
+					installCampaign = cursor.getString(24);
+					installAd = cursor.getString(25);
+					installKeyword = cursor.getString(26);
 					userEvents.add(new UserEvent(userId, sessionId, build,
 							eventId, area, x, y, z, gender, birthYear,
-							friendCount));
+							friendCount, platform, device, osMajor, osMinor,
+							sdkVersion, installPublisher, installSite,
+							installCampaign, installAd, installKeyword));
 				} else if (type.equals(GameAnalytics.QUALITY)) {
 					message = cursor.getString(16);
 					qualityEvents.add(new QualityEvent(userId, sessionId,
@@ -206,7 +244,10 @@ public class EventDatabase {
 
 	protected void addUserEvent(String userId, String sessionId, String build,
 			String eventId, String area, float x, float y, float z,
-			char gender, int birthYear, int friendCount) {
+			char gender, int birthYear, int friendCount, String platform,
+			String device, String osMajor, String osMinor, String sdkVersion,
+			String installPublisher, String installSite,
+			String installCampaign, String installAd, String installKeyword) {
 		final ContentValues values = new ContentValues();
 		values.put(TYPE, GameAnalytics.USER);
 		values.put(USER_ID, userId);
@@ -220,6 +261,16 @@ public class EventDatabase {
 		values.put(GENDER, String.valueOf(gender));
 		values.put(BIRTH_YEAR, birthYear);
 		values.put(FRIEND_COUNT, friendCount);
+		values.put(PLATFORM, platform);
+		values.put(DEVICE, device);
+		values.put(OS_MAJOR, osMajor);
+		values.put(OS_MINOR, osMinor);
+		values.put(SDK_VERSION, sdkVersion);
+		values.put(INSTALL_PUBLISHER, installPublisher);
+		values.put(INSTALL_SITE, installSite);
+		values.put(INSTALL_CAMPAIGN, installCampaign);
+		values.put(INSTALL_AD, installAd);
+		values.put(INSTALL_KEYWORD, installKeyword);
 		// Do insert on seperate thread so that if synchronization locks up the
 		// method, main thread can return.
 		new Thread() {
@@ -291,7 +342,19 @@ public class EventDatabase {
 
 		@Override
 		public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-			// No persistent data, no need for updrades
+			// Version 1 - ORIGINAL
+			// Version 2 - Added optional user fields
+			if (newVersion > oldVersion) {
+				if (oldVersion == 1) {
+					db.execSQL("ALTER TABLE " + TABLENAME + " ADD COLUMN "
+							+ PLATFORM + " text," + DEVICE + " text,"
+							+ OS_MAJOR + " text," + OS_MINOR + " text,"
+							+ SDK_VERSION + " text," + INSTALL_PUBLISHER
+							+ " text," + INSTALL_SITE + " text,"
+							+ INSTALL_CAMPAIGN + " text," + INSTALL_AD
+							+ " text," + INSTALL_KEYWORD + " text");
+				}
+			}
 		}
 	}
 }
