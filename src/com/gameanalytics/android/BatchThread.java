@@ -20,6 +20,9 @@ package com.gameanalytics.android;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map.Entry;
+
 import org.apache.http.Header;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
@@ -48,7 +51,7 @@ public class BatchThread extends Thread {
 	// Once a BatchThread has started it is capable of running independently
 	// from the application. Hence all non-final static fields are passed into
 	// the BatchThread in its constructor:
-	private String gameKey;
+	private String defaultGameKey;
 	private String secretKey;
 	private int sendEventInterval;
 	private int networkPollInterval;
@@ -58,10 +61,6 @@ public class BatchThread extends Thread {
 	private boolean cacheLocally;
 	private boolean pollNetwork = true;
 
-	// Once this is set to true, all further events will be send off by the next
-	// BatchThread.
-	private boolean startNewThread = false;
-
 	protected BatchThread(Context context, AsyncHttpClient client,
 			EventDatabase eventDatabase, String gameKey, String secretKey,
 			int sendEventInterval, int networkPollInterval, boolean cacheLocally) {
@@ -69,7 +68,7 @@ public class BatchThread extends Thread {
 		this.context = context;
 		this.client = client;
 		this.eventDatabase = eventDatabase;
-		this.gameKey = gameKey;
+		this.defaultGameKey = gameKey;
 		this.secretKey = secretKey;
 		this.sendEventInterval = sendEventInterval;
 		this.networkPollInterval = networkPollInterval;
@@ -99,17 +98,17 @@ public class BatchThread extends Thread {
 		// Is cache locally enabled?
 		if (!cacheLocally && !isNetworkConnected()) {
 			// Wipe database
-			GALog.i("No network available, clearing events");
+			GALog.i("No network available and cache locally is disabled, clearing events");
 			eventDatabase.clear();
 			// Don't bother polling network
-			startNewThread = true;
+			GameAnalytics.canStartNewThread();
 			return;
 		}
 
 		// Is network polling disabled
 		if (!pollNetwork && !isNetworkConnected()) {
 			GALog.i("No network available");
-			startNewThread = true;
+			GameAnalytics.canStartNewThread();
 			return;
 		}
 
@@ -125,51 +124,80 @@ public class BatchThread extends Thread {
 		}
 
 		GALog.i("Network is connected, sending events");
-		startNewThread = true;
+
 		sendEvents();
 	}
 
 	@SuppressWarnings("unchecked")
 	private void sendEvents() {
 		// Get events from database
-		ArrayList<?>[] eventLists = eventDatabase.getEvents();
-		ArrayList<DesignEvent> designEvents = (ArrayList<DesignEvent>) eventLists[0];
-		ArrayList<BusinessEvent> businessEvents = (ArrayList<BusinessEvent>) eventLists[1];
-		ArrayList<UserEvent> userEvents = (ArrayList<UserEvent>) eventLists[2];
-		ArrayList<QualityEvent> qualityEvents = (ArrayList<QualityEvent>) eventLists[3];
+		Object[] eventLists = eventDatabase.getEvents();
+		HashMap<String, EventList<DesignEvent>> designEvents = (HashMap<String, EventList<DesignEvent>>) eventLists[0];
+		HashMap<String, EventList<BusinessEvent>> businessEvents = (HashMap<String, EventList<BusinessEvent>>) eventLists[1];
+		HashMap<String, EventList<UserEvent>> userEvents = (HashMap<String, EventList<UserEvent>>) eventLists[2];
+		HashMap<String, EventList<QualityEvent>> qualityEvents = (HashMap<String, EventList<QualityEvent>>) eventLists[3];
 
+		// For each game id and event array
+		String eventGameKey;
+		EventList<?> eventList;
 		// Convert event lists to json using GSON
 		Gson gson = new Gson();
 		// Send events if the list is not empty
-		if (!designEvents.isEmpty()) {
-			GALog.i("Sending " + designEvents.size() + " design events.");
-			sendEventSet(gson.toJson(designEvents), GameAnalytics.DESIGN);
-		} else
-			GALog.i("No design events to send.");
-
-		if (!businessEvents.isEmpty()) {
-			GALog.i("Sending " + businessEvents.size() + " business events.");
-			sendEventSet(gson.toJson(businessEvents), GameAnalytics.BUSINESS);
-		} else
-			GALog.i("No business events to send.");
-
-		if (!qualityEvents.isEmpty()) {
-			GALog.i("Sending " + qualityEvents.size() + " quality events.");
-			sendEventSet(gson.toJson(qualityEvents), GameAnalytics.QUALITY);
-		} else
-			GALog.i("No quality events to send.");
-
-		if (!userEvents.isEmpty()) {
-			GALog.i("Sending " + userEvents.size() + " user events.");
-			sendEventSet(gson.toJson(userEvents), GameAnalytics.USER);
-		} else
-			GALog.i("No user events to send.");
+		for (Entry<String, EventList<DesignEvent>> e : designEvents.entrySet()) {
+			eventGameKey = e.getKey();
+			eventList = e.getValue();
+			if (!eventList.isEmpty()) {
+				GALog.i("Sending " + eventList.size() + " design events.");
+				sendEventSet(gson.toJson(eventList), GameAnalytics.DESIGN,
+						eventGameKey, eventList.getEventIdList());
+			} else
+				GALog.i("No design events to send.");
+		}
+		for (Entry<String, EventList<BusinessEvent>> e : businessEvents
+				.entrySet()) {
+			eventGameKey = e.getKey();
+			eventList = e.getValue();
+			if (!eventList.isEmpty()) {
+				GALog.i("Sending " + businessEvents.size()
+						+ " business events.");
+				sendEventSet(gson.toJson(eventList), GameAnalytics.BUSINESS,
+						eventGameKey, eventList.getEventIdList());
+			} else
+				GALog.i("No business events to send.");
+		}
+		for (Entry<String, EventList<QualityEvent>> e : qualityEvents
+				.entrySet()) {
+			eventGameKey = e.getKey();
+			eventList = e.getValue();
+			if (!eventList.isEmpty()) {
+				GALog.i("Sending " + qualityEvents.size() + " quality events.");
+				sendEventSet(gson.toJson(eventList), GameAnalytics.QUALITY,
+						eventGameKey, eventList.getEventIdList());
+			} else
+				GALog.i("No quality events to send.");
+		}
+		for (Entry<String, EventList<UserEvent>> e : userEvents.entrySet()) {
+			eventGameKey = e.getKey();
+			eventList = e.getValue();
+			if (!eventList.isEmpty()) {
+				GALog.i("Sending " + userEvents.size() + " user events.");
+				sendEventSet(gson.toJson(eventList), GameAnalytics.USER,
+						eventGameKey, eventList.getEventIdList());
+			} else
+				GALog.i("No user events to send.");
+		}
 	}
 
-	private void sendEventSet(String json, String category) {
+	private void sendEventSet(String json, String category,
+			String eventGameKey, ArrayList<Integer> eventsToDelete) {
+		// Game key for these events
+		if (eventGameKey == EventDatabase.DEFAULT_GAME_KEY) {
+			eventGameKey = this.defaultGameKey;
+		}
+
 		// Print response if in VERBOSE mode
-		GALog.i("Raw JSON for " + category
-				+ " events being sent to GA server: " + json);
+		GALog.i("Raw JSON for " + category + ", game key = " + eventGameKey
+				+ ", events being sent to GA server: " + json);
 
 		// Add auth header
 		Header[] headers = new Header[1];
@@ -184,17 +212,18 @@ public class BatchThread extends Thread {
 			GALog.e("Error converting json String into StringEntity: "
 					+ e.toString(), e);
 		}
-		client.post(context, GameAnalytics.API_URL + gameKey + category,
-				jsonEntity, GameAnalytics.CONTENT_TYPE_JSON, headers,
-				GameAnalytics.postResponseHandler);
+		
+		client.post(
+				context,
+				GameAnalytics.API_URL + eventGameKey + category,
+				jsonEntity,
+				GameAnalytics.CONTENT_TYPE_JSON,
+				headers,
+				new PostResponseHandler(eventsToDelete, eventDatabase, category));
 	}
 
 	private String getAuthorizationString(String json) {
 		return GameAnalytics.md5(json + secretKey);
-	}
-
-	protected boolean shouldStartNewThread() {
-		return startNewThread;
 	}
 
 	private boolean isNetworkConnected() {

@@ -19,6 +19,8 @@
 package com.gameanalytics.android;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -33,10 +35,14 @@ public class EventDatabase {
 		this.db = new OpenHelper(context).getWritableDatabase();
 	}
 
+	// Other values
+	public final static String DEFAULT_GAME_KEY = "default_game_key";
+
 	// DATABASE SCHEMA
 	// Common
 	protected final static String TABLENAME = "events";
 	protected final static String ROW_ID = "_id";
+	protected final static String GAME_KEY = "game_key";
 	protected final static String TYPE = "type";
 	protected final static String USER_ID = "user_id";
 	protected final static String SESSION_ID = "session_id";
@@ -85,24 +91,26 @@ public class EventDatabase {
 			+ " text," + DEVICE + " text," + OS_MAJOR + " text," + OS_MINOR
 			+ " text," + SDK_VERSION + " text," + INSTALL_PUBLISHER + " text,"
 			+ INSTALL_SITE + " text," + INSTALL_CAMPAIGN + " text,"
-			+ INSTALL_AD + " text," + INSTALL_KEYWORD + " text" + ");";
+			+ INSTALL_AD + " text," + INSTALL_KEYWORD + " text,"
+			+ GAME_KEY + " text" + ");";
 
 	// Database operations (SYNCHRONIZED)
 	// The following methods are synchronized so that extra events won't be
 	// added to the database while the current lot are being pulled out and
 	// sent.
-	synchronized protected ArrayList<?>[] getEvents() {
+	synchronized protected Object[] getEvents() {
 		// Get all events
 		Cursor cursor = db.query(TABLENAME, null, null, null, null, null,
 				ROW_ID);
 
-		// Create ArrayLists
-		ArrayList<DesignEvent> designEvents = new ArrayList<DesignEvent>();
-		ArrayList<UserEvent> userEvents = new ArrayList<UserEvent>();
-		ArrayList<BusinessEvent> businessEvents = new ArrayList<BusinessEvent>();
-		ArrayList<QualityEvent> qualityEvents = new ArrayList<QualityEvent>();
+		// Create Hashmaps of event arrays to support multiple game ids
+		HashMap<String, EventList<DesignEvent>> designEvents = new HashMap<String, EventList<DesignEvent>>();
+		HashMap<String, EventList<UserEvent>> userEvents = new HashMap<String, EventList<UserEvent>>();
+		HashMap<String, EventList<BusinessEvent>> businessEvents = new HashMap<String, EventList<BusinessEvent>>();
+		HashMap<String, EventList<QualityEvent>> qualityEvents = new HashMap<String, EventList<QualityEvent>>();
 
 		// Columns
+		int rowId;
 		String type;
 		String userId;
 		String sessionId;
@@ -129,10 +137,12 @@ public class EventDatabase {
 		String installCampaign;
 		String installAd;
 		String installKeyword;
+		String gameKey;
 
 		// Populate ArrayLists
 		if (cursor.moveToFirst()) {
 			while (!cursor.isAfterLast()) {
+				rowId = cursor.getInt(0);
 				type = cursor.getString(1);
 				userId = cursor.getString(2);
 				sessionId = cursor.getString(3);
@@ -143,16 +153,40 @@ public class EventDatabase {
 				y = cursor.getFloat(8);
 				z = cursor.getFloat(9);
 
+				// By saving gameId for every event we support the game id
+				// changing between app versions
+				gameKey = cursor.getString(27);
+
+				// For backward compatibility, is gameKey null?
+				if (gameKey == null) {
+					gameKey = DEFAULT_GAME_KEY;
+				}
+
 				if (type.equals(GameAnalytics.DESIGN)) {
+					// Create new arraylist if first event with this game id
+					if (designEvents.get(gameKey) == null) {
+						designEvents.put(gameKey, new EventList<DesignEvent>());
+					}
 					value = cursor.getFloat(10);
-					designEvents.add(new DesignEvent(userId, sessionId, build,
-							eventId, area, x, y, z, value));
+					designEvents.get(gameKey).addEvent(
+							new DesignEvent(userId, sessionId, build, eventId,
+									area, x, y, z, value), rowId);
 				} else if (type.equals(GameAnalytics.BUSINESS)) {
+					// Create new arraylist if first event with this game id
+					if (businessEvents.get(gameKey) == null) {
+						businessEvents.put(gameKey, new EventList<BusinessEvent>());
+					}
 					currency = cursor.getString(11);
 					amount = cursor.getInt(12);
-					businessEvents.add(new BusinessEvent(userId, sessionId,
-							build, eventId, area, x, y, z, currency, amount));
+					businessEvents.get(gameKey).addEvent(
+							new BusinessEvent(userId, sessionId, build,
+									eventId, area, x, y, z, currency, amount),
+							rowId);
 				} else if (type.equals(GameAnalytics.USER)) {
+					// Create new arraylist if first event with this game id
+					if (userEvents.get(gameKey) == null) {
+						userEvents.put(gameKey, new EventList<UserEvent>());
+					}
 					gender = cursor.getString(13).toCharArray()[0];
 					birthYear = cursor.getInt(14);
 					friendCount = cursor.getInt(15);
@@ -166,26 +200,30 @@ public class EventDatabase {
 					installCampaign = cursor.getString(24);
 					installAd = cursor.getString(25);
 					installKeyword = cursor.getString(26);
-					userEvents.add(new UserEvent(userId, sessionId, build,
-							eventId, area, x, y, z, gender, birthYear,
-							friendCount, platform, device, osMajor, osMinor,
-							sdkVersion, installPublisher, installSite,
-							installCampaign, installAd, installKeyword));
+					userEvents.get(gameKey).addEvent(
+							new UserEvent(userId, sessionId, build, eventId,
+									area, x, y, z, gender, birthYear,
+									friendCount, platform, device, osMajor,
+									osMinor, sdkVersion, installPublisher,
+									installSite, installCampaign, installAd,
+									installKeyword), rowId);
 				} else if (type.equals(GameAnalytics.QUALITY)) {
+					// Create new arraylist if first event with this game id
+					if (qualityEvents.get(gameKey) == null) {
+						qualityEvents.put(gameKey, new EventList<QualityEvent>());
+					}
 					message = cursor.getString(16);
-					qualityEvents.add(new QualityEvent(userId, sessionId,
-							build, eventId, area, x, y, z, message));
+					qualityEvents.get(gameKey).addEvent(
+							new QualityEvent(userId, sessionId, build, eventId,
+									area, x, y, z, message), rowId);
 				}
 				cursor.moveToNext();
 			}
 		}
 		cursor.close();
 
-		// Delete events from database
-		db.delete(TABLENAME, null, null);
-
-		// Return ArrayLists
-		return new ArrayList<?>[] { designEvents, businessEvents, userEvents,
+		// Return Hashmaps
+		return new Object[] { designEvents, businessEvents, userEvents,
 				qualityEvents };
 	}
 
@@ -195,10 +233,25 @@ public class EventDatabase {
 		}
 	}
 
-	protected void addDesignEvent(String userId, String sessionId,
-			String build, String eventId, String area, float x, float y,
-			float z, float value) {
+	protected void deleteSentEvents(ArrayList<Integer> eventsToDelete) {
+		GALog.i("Deleting "+eventsToDelete.size()+" events");
+		String idList = "(";
+		for (Integer i : eventsToDelete) {
+			if (!idList.equals("(")) {
+				idList += ",";
+			}
+			idList = idList + i;
+		}
+		idList += ")";
+
+		db.delete(TABLENAME, "_id IN " + idList, null);
+	}
+
+	protected void addDesignEvent(String gameKey, String userId,
+			String sessionId, String build, String eventId, String area,
+			float x, float y, float z, float value) {
 		final ContentValues values = new ContentValues();
+		values.put(GAME_KEY, gameKey);
 		values.put(TYPE, GameAnalytics.DESIGN);
 		values.put(USER_ID, userId);
 		values.put(SESSION_ID, sessionId);
@@ -218,10 +271,11 @@ public class EventDatabase {
 		}.start();
 	}
 
-	protected void addBusinessEvent(String userId, String sessionId,
-			String build, String eventId, String area, float x, float y,
-			float z, String currency, int amount) {
+	protected void addBusinessEvent(String gameKey, String userId,
+			String sessionId, String build, String eventId, String area,
+			float x, float y, float z, String currency, int amount) {
 		final ContentValues values = new ContentValues();
+		values.put(GAME_KEY, gameKey);
 		values.put(TYPE, GameAnalytics.BUSINESS);
 		values.put(USER_ID, userId);
 		values.put(SESSION_ID, sessionId);
@@ -242,13 +296,15 @@ public class EventDatabase {
 		}.start();
 	}
 
-	protected void addUserEvent(String userId, String sessionId, String build,
-			String eventId, String area, float x, float y, float z,
-			char gender, int birthYear, int friendCount, String platform,
-			String device, String osMajor, String osMinor, String sdkVersion,
-			String installPublisher, String installSite,
-			String installCampaign, String installAd, String installKeyword) {
+	protected void addUserEvent(String gameKey, String userId,
+			String sessionId, String build, String eventId, String area,
+			float x, float y, float z, char gender, int birthYear,
+			int friendCount, String platform, String device, String osMajor,
+			String osMinor, String sdkVersion, String installPublisher,
+			String installSite, String installCampaign, String installAd,
+			String installKeyword) {
 		final ContentValues values = new ContentValues();
+		values.put(GAME_KEY, gameKey);
 		values.put(TYPE, GameAnalytics.USER);
 		values.put(USER_ID, userId);
 		values.put(SESSION_ID, sessionId);
@@ -280,10 +336,11 @@ public class EventDatabase {
 		}.start();
 	}
 
-	protected void addQualityEvent(String userId, String sessionId,
-			String build, String eventId, String area, float x, float y,
-			float z, String message) {
+	protected void addQualityEvent(String gameKey, String userId,
+			String sessionId, String build, String eventId, String area,
+			float x, float y, float z, String message) {
 		final ContentValues values = new ContentValues();
+		values.put(GAME_KEY, gameKey);
 		values.put(TYPE, GameAnalytics.QUALITY);
 		values.put(USER_ID, userId);
 		values.put(SESSION_ID, sessionId);
@@ -326,7 +383,7 @@ public class EventDatabase {
 
 		// Database details
 		private final static String DB_NAME = "GameAnalytics";
-		private final static int DB_VERSION = 1;
+		private final static int DB_VERSION = 2;
 
 		public OpenHelper(Context context) {
 			super(context, DB_NAME, null, DB_VERSION);
@@ -346,13 +403,20 @@ public class EventDatabase {
 			// Version 2 - Added optional user fields
 			if (newVersion > oldVersion) {
 				if (oldVersion == 1) {
-					db.execSQL("ALTER TABLE " + TABLENAME + " ADD COLUMN "
-							+ PLATFORM + " text," + DEVICE + " text,"
-							+ OS_MAJOR + " text," + OS_MINOR + " text,"
-							+ SDK_VERSION + " text," + INSTALL_PUBLISHER
-							+ " text," + INSTALL_SITE + " text,"
-							+ INSTALL_CAMPAIGN + " text," + INSTALL_AD
-							+ " text," + INSTALL_KEYWORD + " text");
+					String addColumn = "ALTER TABLE " + TABLENAME
+							+ " ADD COLUMN ";
+					String text = " text";
+					db.execSQL(addColumn + PLATFORM + text);
+					db.execSQL(addColumn + DEVICE + text);
+					db.execSQL(addColumn + OS_MAJOR + text);
+					db.execSQL(addColumn + OS_MINOR + text);
+					db.execSQL(addColumn + SDK_VERSION + text);
+					db.execSQL(addColumn + INSTALL_PUBLISHER + text);
+					db.execSQL(addColumn + INSTALL_SITE + text);
+					db.execSQL(addColumn + INSTALL_CAMPAIGN + text);
+					db.execSQL(addColumn + INSTALL_AD + text);
+					db.execSQL(addColumn + INSTALL_KEYWORD + text);
+					db.execSQL(addColumn + GAME_KEY + text);
 				}
 			}
 		}
