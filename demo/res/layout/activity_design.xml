@@ -19,6 +19,16 @@
             android:layout_centerHorizontal="true"
             android:onClick="onButton"
             android:text="Create Icon" />
+
+        <TextView
+            android:id="@+id/fpsCounter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentTop="true"
+            android:text="FPS:"
+            android:textColor="@android:color/holo_orange_light"
+            android:textSize="18sp" />
     </RelativeLayout>
 
 </FrameLayout>

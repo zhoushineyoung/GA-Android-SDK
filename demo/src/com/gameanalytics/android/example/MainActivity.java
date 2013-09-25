@@ -11,8 +11,8 @@ public class MainActivity extends Activity {
 
 	// Game key and secret key supplied when registering at
 	// www.gameanalytics.com
-	private final String GAME_KEY = "xxx";
-	private final String SECRET_KEY = "xxx";
+	private final String GAME_KEY = "59ac59a0afeaf44c424b24974b3f21c2";
+	private final String SECRET_KEY = "45bce17e069a51169146371bef627d45a2d2905e";
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -33,8 +33,8 @@ public class MainActivity extends Activity {
 
 		// Set up non-default intervals (optional)
 		GameAnalytics.setNetworkPollInterval(30000);
-		GameAnalytics.setSendEventsInterval(10000);
-		GameAnalytics.setSessionTimeOut(10000);
+		GameAnalytics.setSendEventsInterval(2000);
+		GameAnalytics.setSessionTimeOut(2000);
 
 	}
 

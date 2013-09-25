@@ -7,10 +7,10 @@ import javax.microedition.khronos.opengles.GL10;
 import com.gameanalytics.android.GameAnalytics;
 import com.twicecircled.spritebatcher.Drawer;
 import com.twicecircled.spritebatcher.SpriteBatcher;
-
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.TextView;
 
 /*	NOTE ON GRAPHICS:
  *  The OpenGL graphics are implemented using SpriteBatcher, a library to allow easy
@@ -30,7 +30,13 @@ import android.view.View;
 public class DesignEventsActivity extends GameAnalyticsActivity implements
 		Drawer {
 
+	private GLSurfaceView surface;
 	private CopyOnWriteArrayList<GAIcon> icons = new CopyOnWriteArrayList<GAIcon>();
+
+	// For onscreen FPS counter
+	private long lastTime;
+	private long timer;
+	private int frameCounter;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -41,7 +47,7 @@ public class DesignEventsActivity extends GameAnalyticsActivity implements
 
 		// Set-up SpriteBatcher which will handle all our 2d sprite drawing
 		int[] bitmapIds = new int[] { R.drawable.icon };
-		GLSurfaceView surface = (GLSurfaceView) findViewById(R.id.glSurfaceView);
+		surface = (GLSurfaceView) findViewById(R.id.glSurfaceView);
 		surface.setRenderer(new SpriteBatcher(getResources(), bitmapIds, this));
 	}
 
@@ -59,6 +65,28 @@ public class DesignEventsActivity extends GameAnalyticsActivity implements
 	public void onDrawFrame(GL10 gl, SpriteBatcher sb) {
 		// Log Frames per Second (FPS)
 		GameAnalytics.logFPS();
+
+		// For screen indicator
+		long nowTime = System.currentTimeMillis();
+		if (lastTime == 0) {
+			lastTime = nowTime;
+		} else {
+			timer += nowTime - lastTime;
+			lastTime = nowTime;
+			frameCounter++;
+			// Every second
+			if (timer > 1000) {
+				// Update on screen indicator
+				runOnUiThread(new Runnable() {
+					public void run() {
+						((TextView) findViewById(R.id.fpsCounter))
+								.setText("FPS: " + frameCounter);
+						timer = 0;
+						frameCounter = 0;
+					}
+				});
+			}
+		}
 
 		// Update our entities' positions
 		updateEntities(sb);
@@ -85,7 +113,19 @@ public class DesignEventsActivity extends GameAnalyticsActivity implements
 	}
 
 	@Override
+	public void onResume() {
+		// Pause our surface view so it stops drawing
+		if (surface != null) {
+			surface.onResume();
+		}
+		super.onResume();
+	}
+
+	@Override
 	public void onPause() {
+		// Pause our surface view so it stops drawing
+		surface.onPause();
+
 		// Stop logging fps, collate information and send to server:
 		GameAnalytics.stopLoggingFPS();
 
