@@ -28,6 +28,15 @@
         <activity android:name="com.gameanalytics.android.example.DesignEventsActivity" />
         <activity android:name="com.gameanalytics.android.example.UserEventsActivity" />
         <activity android:name="com.gameanalytics.android.example.BusinessEventsActivity" />
+
+        <!-- FOR AUTOMATIC REFERRAL RECEIVER -->
+        <receiver
+            android:name="com.gameanalytics.android.example.DemoReferralReceiver"
+            android:exported="true" >
+            <intent-filter>
+                <action android:name="com.android.vending.INSTALL_REFERRER" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

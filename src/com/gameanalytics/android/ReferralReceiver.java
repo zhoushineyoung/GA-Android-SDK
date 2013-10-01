@@ -1,3 +1,21 @@
+/* 
+   Game Analytics Android Wrapper
+   Copyright (c) 2013 Tim Wicksteed <tim@twicecircled.com>
+   http:/www.gameanalytics.com
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+
 package com.gameanalytics.android;
 
 import java.util.StringTokenizer;
@@ -8,8 +26,6 @@ import android.content.Intent;
 
 public abstract class ReferralReceiver extends BroadcastReceiver {
 
-	private static final String REFERRAL = "referral";
-
 	// Google campaign terms
 	private static final String SOURCE = "utm_source";
 	private static final String MEDIUM = "utm_medium";
@@ -19,11 +35,13 @@ public abstract class ReferralReceiver extends BroadcastReceiver {
 
 	@Override
 	public void onReceive(Context context, Intent intent) {
+		// Set logging mode
+		GameAnalytics.setDebugLogLevel(getDebugMode());
+
 		// Get referrer details
 		String referrerDetails = intent.getStringExtra("referrer");
 		GALog.i("Referrer information = " + referrerDetails);
 
-		String qualityEvent = REFERRAL;
 		String term;
 		String value;
 		String installPublisher = null; // utm_source
@@ -54,7 +72,6 @@ public abstract class ReferralReceiver extends BroadcastReceiver {
 				} else if (term.equals(TERM)) {
 					installKeyword = value;
 				}
-				qualityEvent = qualityEvent + ":" + value;
 			}
 		} catch (Exception e) {
 			GALog.e("Error processing referral terms", e);
@@ -66,16 +83,12 @@ public abstract class ReferralReceiver extends BroadcastReceiver {
 			GameAnalytics.initialise(context, getSecretKey(), getGameKey());
 		}
 		if (GameAnalytics.isSessionStarted()) {
-			// Send quality event for developer
-			GameAnalytics.newQualityEvent(qualityEvent, "");
-			// Send user event for GA
+			// Send referral info
 			GameAnalytics.setReferralInfo(installPublisher, installSite,
 					installCampaign, installAd, installKeyword);
 		} else {
 			GameAnalytics.startSession(context);
-			// Send quality event for developer
-			GameAnalytics.newQualityEvent(qualityEvent, "");
-			// Send user event for GA
+			// Send referral info
 			GameAnalytics.setReferralInfo(installPublisher, installSite,
 					installCampaign, installAd, installKeyword);
 			GameAnalytics.stopSession();
@@ -85,5 +98,7 @@ public abstract class ReferralReceiver extends BroadcastReceiver {
 	public abstract String getSecretKey();
 
 	public abstract String getGameKey();
+
+	public abstract int getDebugMode();
 
 }

@@ -45,13 +45,14 @@ public class UserEvent {
 	private String install_campaign;
 	private String install_ad;
 	private String install_keyword;
+	private String android_id;
 
 	public UserEvent(String user_id, String session_id, String build,
 			String event_id, String area, float x, float y, float z,
 			char gender, int birth_year, int friend_count, String platform,
 			String device, String os_major, String os_minor,
 			String sdk_version, String install_publisher, String install_site,
-			String install_campaign, String install_ad, String install_keyword) {
+			String install_campaign, String install_ad, String install_keyword, String android_id) {
 		this.user_id = user_id;
 		this.session_id = session_id;
 		this.build = build;
@@ -75,5 +76,6 @@ public class UserEvent {
 		this.install_campaign = install_campaign;
 		this.install_ad = install_ad;
 		this.install_keyword = install_keyword;
+		this.android_id = android_id;
 	}
 }

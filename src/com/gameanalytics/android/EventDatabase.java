@@ -43,6 +43,7 @@ public class EventDatabase {
 	protected final static String TABLENAME = "events";
 	protected final static String ROW_ID = "_id";
 	protected final static String GAME_KEY = "game_key";
+	protected final static String SECRET_KEY = "secret_key";
 	protected final static String TYPE = "type";
 	protected final static String USER_ID = "user_id";
 	protected final static String SESSION_ID = "session_id";
@@ -77,6 +78,7 @@ public class EventDatabase {
 	protected final static String INSTALL_CAMPAIGN = "install_campaign";
 	protected final static String INSTALL_AD = "install_ad";
 	protected final static String INSTALL_KEYWORD = "install_keyword";
+	protected final static String ANDROID_ID = "android_id";
 
 	// Quality
 	protected final static String MESSAGE = "message";
@@ -91,8 +93,8 @@ public class EventDatabase {
 			+ " text," + DEVICE + " text," + OS_MAJOR + " text," + OS_MINOR
 			+ " text," + SDK_VERSION + " text," + INSTALL_PUBLISHER + " text,"
 			+ INSTALL_SITE + " text," + INSTALL_CAMPAIGN + " text,"
-			+ INSTALL_AD + " text," + INSTALL_KEYWORD + " text,"
-			+ GAME_KEY + " text" + ");";
+			+ INSTALL_AD + " text," + INSTALL_KEYWORD + " text," + GAME_KEY
+			+ " text," + SECRET_KEY + " text," + ANDROID_ID + " text" + ");";
 
 	// Database operations (SYNCHRONIZED)
 	// The following methods are synchronized so that extra events won't be
@@ -138,6 +140,8 @@ public class EventDatabase {
 		String installAd;
 		String installKeyword;
 		String gameKey;
+		String secretKey;
+		String androidId;
 
 		// Populate ArrayLists
 		if (cursor.moveToFirst()) {
@@ -156,6 +160,7 @@ public class EventDatabase {
 				// By saving gameId for every event we support the game id
 				// changing between app versions
 				gameKey = cursor.getString(27);
+				secretKey = cursor.getString(28);
 
 				// For backward compatibility, is gameKey null?
 				if (gameKey == null) {
@@ -165,7 +170,8 @@ public class EventDatabase {
 				if (type.equals(GameAnalytics.DESIGN)) {
 					// Create new arraylist if first event with this game id
 					if (designEvents.get(gameKey) == null) {
-						designEvents.put(gameKey, new EventList<DesignEvent>());
+						designEvents.put(gameKey, new EventList<DesignEvent>(
+								secretKey));
 					}
 					value = cursor.getFloat(10);
 					designEvents.get(gameKey).addEvent(
@@ -174,7 +180,8 @@ public class EventDatabase {
 				} else if (type.equals(GameAnalytics.BUSINESS)) {
 					// Create new arraylist if first event with this game id
 					if (businessEvents.get(gameKey) == null) {
-						businessEvents.put(gameKey, new EventList<BusinessEvent>());
+						businessEvents.put(gameKey,
+								new EventList<BusinessEvent>(secretKey));
 					}
 					currency = cursor.getString(11);
 					amount = cursor.getInt(12);
@@ -185,7 +192,8 @@ public class EventDatabase {
 				} else if (type.equals(GameAnalytics.USER)) {
 					// Create new arraylist if first event with this game id
 					if (userEvents.get(gameKey) == null) {
-						userEvents.put(gameKey, new EventList<UserEvent>());
+						userEvents.put(gameKey, new EventList<UserEvent>(
+								secretKey));
 					}
 					gender = cursor.getString(13).toCharArray()[0];
 					birthYear = cursor.getInt(14);
@@ -200,17 +208,19 @@ public class EventDatabase {
 					installCampaign = cursor.getString(24);
 					installAd = cursor.getString(25);
 					installKeyword = cursor.getString(26);
+					androidId = cursor.getString(29);
 					userEvents.get(gameKey).addEvent(
 							new UserEvent(userId, sessionId, build, eventId,
 									area, x, y, z, gender, birthYear,
 									friendCount, platform, device, osMajor,
 									osMinor, sdkVersion, installPublisher,
 									installSite, installCampaign, installAd,
-									installKeyword), rowId);
+									installKeyword, androidId), rowId);
 				} else if (type.equals(GameAnalytics.QUALITY)) {
 					// Create new arraylist if first event with this game id
 					if (qualityEvents.get(gameKey) == null) {
-						qualityEvents.put(gameKey, new EventList<QualityEvent>());
+						qualityEvents.put(gameKey, new EventList<QualityEvent>(
+								secretKey));
 					}
 					message = cursor.getString(16);
 					qualityEvents.get(gameKey).addEvent(
@@ -234,7 +244,7 @@ public class EventDatabase {
 	}
 
 	protected void deleteSentEvents(ArrayList<Integer> eventsToDelete) {
-		GALog.i("Deleting "+eventsToDelete.size()+" events");
+		GALog.i("Deleting " + eventsToDelete.size() + " events");
 		String idList = "(";
 		for (Integer i : eventsToDelete) {
 			if (!idList.equals("(")) {
@@ -247,11 +257,12 @@ public class EventDatabase {
 		db.delete(TABLENAME, "_id IN " + idList, null);
 	}
 
-	protected void addDesignEvent(String gameKey, String userId,
-			String sessionId, String build, String eventId, String area,
-			float x, float y, float z, float value) {
+	protected void addDesignEvent(String gameKey, String secretKey,
+			String userId, String sessionId, String build, String eventId,
+			String area, float x, float y, float z, float value) {
 		final ContentValues values = new ContentValues();
 		values.put(GAME_KEY, gameKey);
+		values.put(SECRET_KEY, secretKey);
 		values.put(TYPE, GameAnalytics.DESIGN);
 		values.put(USER_ID, userId);
 		values.put(SESSION_ID, sessionId);
@@ -271,11 +282,12 @@ public class EventDatabase {
 		}.start();
 	}
 
-	protected void addBusinessEvent(String gameKey, String userId,
-			String sessionId, String build, String eventId, String area,
-			float x, float y, float z, String currency, int amount) {
+	protected void addBusinessEvent(String gameKey, String secretKey,
+			String userId, String sessionId, String build, String eventId,
+			String area, float x, float y, float z, String currency, int amount) {
 		final ContentValues values = new ContentValues();
 		values.put(GAME_KEY, gameKey);
+		values.put(SECRET_KEY, secretKey);
 		values.put(TYPE, GameAnalytics.BUSINESS);
 		values.put(USER_ID, userId);
 		values.put(SESSION_ID, sessionId);
@@ -296,15 +308,16 @@ public class EventDatabase {
 		}.start();
 	}
 
-	protected void addUserEvent(String gameKey, String userId,
-			String sessionId, String build, String eventId, String area,
-			float x, float y, float z, char gender, int birthYear,
+	protected void addUserEvent(String gameKey, String secretKey,
+			String userId, String sessionId, String build, String eventId,
+			String area, float x, float y, float z, char gender, int birthYear,
 			int friendCount, String platform, String device, String osMajor,
 			String osMinor, String sdkVersion, String installPublisher,
 			String installSite, String installCampaign, String installAd,
-			String installKeyword) {
+			String installKeyword, String androidId) {
 		final ContentValues values = new ContentValues();
 		values.put(GAME_KEY, gameKey);
+		values.put(SECRET_KEY, secretKey);
 		values.put(TYPE, GameAnalytics.USER);
 		values.put(USER_ID, userId);
 		values.put(SESSION_ID, sessionId);
@@ -327,6 +340,7 @@ public class EventDatabase {
 		values.put(INSTALL_CAMPAIGN, installCampaign);
 		values.put(INSTALL_AD, installAd);
 		values.put(INSTALL_KEYWORD, installKeyword);
+		values.put(ANDROID_ID, androidId);
 		// Do insert on seperate thread so that if synchronization locks up the
 		// method, main thread can return.
 		new Thread() {
@@ -336,11 +350,12 @@ public class EventDatabase {
 		}.start();
 	}
 
-	protected void addQualityEvent(String gameKey, String userId,
-			String sessionId, String build, String eventId, String area,
-			float x, float y, float z, String message) {
+	protected void addQualityEvent(String gameKey, String secretKey,
+			String userId, String sessionId, String build, String eventId,
+			String area, float x, float y, float z, String message) {
 		final ContentValues values = new ContentValues();
 		values.put(GAME_KEY, gameKey);
+		values.put(SECRET_KEY, secretKey);
 		values.put(TYPE, GameAnalytics.QUALITY);
 		values.put(USER_ID, userId);
 		values.put(SESSION_ID, sessionId);
@@ -417,6 +432,8 @@ public class EventDatabase {
 					db.execSQL(addColumn + INSTALL_AD + text);
 					db.execSQL(addColumn + INSTALL_KEYWORD + text);
 					db.execSQL(addColumn + GAME_KEY + text);
+					db.execSQL(addColumn + SECRET_KEY + text);
+					db.execSQL(addColumn + ANDROID_ID + text);
 				}
 			}
 		}

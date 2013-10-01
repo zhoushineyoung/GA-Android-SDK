@@ -52,7 +52,7 @@ public class BatchThread extends Thread {
 	// from the application. Hence all non-final static fields are passed into
 	// the BatchThread in its constructor:
 	private String defaultGameKey;
-	private String secretKey;
+	private String defaultSecretKey;
 	private int sendEventInterval;
 	private int networkPollInterval;
 	private Context context;
@@ -69,7 +69,7 @@ public class BatchThread extends Thread {
 		this.client = client;
 		this.eventDatabase = eventDatabase;
 		this.defaultGameKey = gameKey;
-		this.secretKey = secretKey;
+		this.defaultSecretKey = secretKey;
 		this.sendEventInterval = sendEventInterval;
 		this.networkPollInterval = networkPollInterval;
 		this.cacheLocally = cacheLocally;
@@ -149,7 +149,7 @@ public class BatchThread extends Thread {
 			if (!eventList.isEmpty()) {
 				GALog.i("Sending " + eventList.size() + " design events.");
 				sendEventSet(gson.toJson(eventList), GameAnalytics.DESIGN,
-						eventGameKey, eventList.getEventIdList());
+						eventGameKey, eventList);
 			} else
 				GALog.i("No design events to send.");
 		}
@@ -158,10 +158,9 @@ public class BatchThread extends Thread {
 			eventGameKey = e.getKey();
 			eventList = e.getValue();
 			if (!eventList.isEmpty()) {
-				GALog.i("Sending " + businessEvents.size()
-						+ " business events.");
+				GALog.i("Sending " + eventList.size() + " business events.");
 				sendEventSet(gson.toJson(eventList), GameAnalytics.BUSINESS,
-						eventGameKey, eventList.getEventIdList());
+						eventGameKey, eventList);
 			} else
 				GALog.i("No business events to send.");
 		}
@@ -170,9 +169,9 @@ public class BatchThread extends Thread {
 			eventGameKey = e.getKey();
 			eventList = e.getValue();
 			if (!eventList.isEmpty()) {
-				GALog.i("Sending " + qualityEvents.size() + " quality events.");
+				GALog.i("Sending " + eventList.size() + " quality events.");
 				sendEventSet(gson.toJson(eventList), GameAnalytics.QUALITY,
-						eventGameKey, eventList.getEventIdList());
+						eventGameKey, eventList);
 			} else
 				GALog.i("No quality events to send.");
 		}
@@ -180,19 +179,24 @@ public class BatchThread extends Thread {
 			eventGameKey = e.getKey();
 			eventList = e.getValue();
 			if (!eventList.isEmpty()) {
-				GALog.i("Sending " + userEvents.size() + " user events.");
+				GALog.i("Sending " + eventList.size() + " user events.");
 				sendEventSet(gson.toJson(eventList), GameAnalytics.USER,
-						eventGameKey, eventList.getEventIdList());
+						eventGameKey, eventList);
 			} else
 				GALog.i("No user events to send.");
 		}
 	}
 
 	private void sendEventSet(String json, String category,
-			String eventGameKey, ArrayList<Integer> eventsToDelete) {
+			String eventGameKey, EventList<?> eventList) {
+		// Extract bits from eventList
+		String eventSecretKey = eventList.getSecretKey();
+		ArrayList<Integer> eventsToDelete = eventList.getEventIdList();
+
 		// Game key for these events
 		if (eventGameKey == EventDatabase.DEFAULT_GAME_KEY) {
 			eventGameKey = this.defaultGameKey;
+			eventSecretKey = this.defaultSecretKey;
 		}
 
 		// Print response if in VERBOSE mode
@@ -202,7 +206,7 @@ public class BatchThread extends Thread {
 		// Add auth header
 		Header[] headers = new Header[1];
 		headers[0] = new BasicHeader(GameAnalytics.AUTHORIZATION,
-				getAuthorizationString(json));
+				getAuthorizationString(json, eventSecretKey));
 
 		// POST request to server
 		StringEntity jsonEntity = null;
@@ -212,7 +216,7 @@ public class BatchThread extends Thread {
 			GALog.e("Error converting json String into StringEntity: "
 					+ e.toString(), e);
 		}
-		
+
 		client.post(
 				context,
 				GameAnalytics.API_URL + eventGameKey + category,
@@ -222,8 +226,8 @@ public class BatchThread extends Thread {
 				new PostResponseHandler(eventsToDelete, eventDatabase, category));
 	}
 
-	private String getAuthorizationString(String json) {
-		return GameAnalytics.md5(json + secretKey);
+	private String getAuthorizationString(String json, String eventSecretKey) {
+		return GameAnalytics.md5(json + eventSecretKey);
 	}
 
 	private boolean isNetworkConnected() {
