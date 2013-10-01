@@ -30,5 +30,10 @@
         style="@style/LinearLayoutButton"
         android:onClick="onError"
         android:text="Force Error" />
+    
+    <Button
+        style="@style/LinearLayoutButton"
+        android:onClick="onReferral"
+        android:text="Send referral" />
 
 </LinearLayout>

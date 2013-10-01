@@ -23,7 +23,7 @@ public class UserEventsActivity extends GameAnalyticsActivity {
 
 		// Set display
 		setContentView(R.layout.activity_user);
-		
+
 		// Configure DatePicker
 		DatePicker picker = (DatePicker) findViewById(R.id.datePicker);
 		picker.updateDate(1988, 0, 1);
@@ -71,7 +71,9 @@ public class UserEventsActivity extends GameAnalyticsActivity {
 		}
 
 		// Log user event
-		GameAnalytics.newUserEvent("Submit", gender, birthYear, friendCount);
+		/** DEPRECATED: **/
+		// GameAnalytics.newUserEvent("Submit", gender, birthYear, friendCount);
+		GameAnalytics.setUserInfo(gender, birthYear, friendCount);
 
 		// Go back
 		finish();
