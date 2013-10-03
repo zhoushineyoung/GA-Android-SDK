@@ -11,8 +11,8 @@ public class MainActivity extends Activity {
 
 	// Game key and secret key supplied when registering at
 	// www.gameanalytics.com
-	protected final static String GAME_KEY = "59ac59a0afeaf44c424b24974b3f21c2";
-	protected final static String SECRET_KEY = "45bce17e069a51169146371bef627d45a2d2905e";
+	protected final static String GAME_KEY = "xxx";
+	protected final static String SECRET_KEY = "xxx";
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -28,7 +28,7 @@ public class MainActivity extends Activity {
 		// Set-up game analytics
 		GameAnalytics.initialise(this, SECRET_KEY, GAME_KEY);
 
-		// Turn on automatic logging of unhandled exceptions
+		// Turn on automatic logging of unhandled exceptions for main/GUI thread
 		GameAnalytics.logUnhandledExceptions();
 
 		// Set up non-default intervals (optional)

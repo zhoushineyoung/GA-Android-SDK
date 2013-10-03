@@ -18,6 +18,7 @@
 
 package com.gameanalytics.android;
 
+@SuppressWarnings("unused")
 public class QualityEvent{
 	// GENERAL
 	private String user_id;

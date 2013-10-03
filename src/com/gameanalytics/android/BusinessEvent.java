@@ -18,6 +18,7 @@
 
 package com.gameanalytics.android;
 
+@SuppressWarnings("unused")
 public class BusinessEvent {
 	// GENERAL
 	private String user_id;

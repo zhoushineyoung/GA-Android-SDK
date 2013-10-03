@@ -63,6 +63,9 @@ public class DesignEventsActivity extends GameAnalyticsActivity implements
 	// Gets called every time a frame is to be drawn on GLSurfaceView:
 	@Override
 	public void onDrawFrame(GL10 gl, SpriteBatcher sb) {
+		// Turn on automatic logging of unhandled exceptions for this thread
+		GameAnalytics.logUnhandledExceptions();
+
 		// Log Frames per Second (FPS)
 		GameAnalytics.logFPS();
 

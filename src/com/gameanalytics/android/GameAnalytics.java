@@ -162,6 +162,7 @@ public class GameAnalytics {
 		EVENT_DATABASE = new EventDatabase(context);
 		DEFAULT_EXCEPTION_HANDLER = Thread.currentThread()
 				.getUncaughtExceptionHandler();
+		EXCEPTION_LOGGER = new ExceptionLogger();
 
 		// Set boolean initialised, newEvent() can only be called after
 		// initialise() and startSession()
@@ -666,7 +667,9 @@ public class GameAnalytics {
 
 	/**
 	 * Call this method at the same time as initialise() to automatically log
-	 * any unhandled exceptions.
+	 * any unhandled exceptions occuring on your main/GUI thread. You need to
+	 * call this method from ever thread that you wish to log unhandled
+	 * exceptions on e.g. update loop, draw loop etc.
 	 */
 	public static void logUnhandledExceptions() {
 		Thread.currentThread().setUncaughtExceptionHandler(EXCEPTION_LOGGER);
