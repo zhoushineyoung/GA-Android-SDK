@@ -100,7 +100,7 @@ public class GameAnalytics {
 	private static long SESSION_END_TIME;
 	private static long START_FPS_TIME;
 	private static int FPS_FRAMES;
-	private static ArrayList<String> FINISHED_SENDING_EVENTS = new ArrayList<String>();
+	private static ArrayList<PostResponseHandler> FINISHED_SENDING_EVENTS = new ArrayList<PostResponseHandler>();
 	private static boolean CAN_START_NEW_THREAD = true;
 
 	/**
@@ -833,22 +833,28 @@ public class GameAnalytics {
 				null, null, null, null, UNHASHED_ANDROID_ID);
 	}
 
-	protected static void sendingEvents(String category) {
-		GALog.i(category + " events: Sending events.");
-		FINISHED_SENDING_EVENTS.add(category);
+	protected static void sendingEvents(PostResponseHandler handler) {
+		GALog.i("Sending " + handler.getNumberOfEvents() + " "
+				+ handler.getCategory() + " events.");
+		FINISHED_SENDING_EVENTS.add(handler);
 	}
 
-	protected static void finishedSendingEvents(String category) {
-		GALog.i(category + " events: Finished sending.");
-		FINISHED_SENDING_EVENTS.remove(category);
-		if (FINISHED_SENDING_EVENTS.isEmpty()) {
-			CAN_START_NEW_THREAD = true;
-			GALog.i("OK, ready to start new thread.");
-		}
+	protected static void finishedSendingEvents(PostResponseHandler handler) {
+		GALog.i("Finished sending " + handler.getNumberOfEvents() + " "
+				+ handler.getCategory() + " events.");
+		FINISHED_SENDING_EVENTS.remove(handler);
+		checkIfNoEvents();
 	}
 
 	protected static void canStartNewThread() {
 		CAN_START_NEW_THREAD = true;
 		FINISHED_SENDING_EVENTS.clear();
+	}
+
+	protected static void checkIfNoEvents() {
+		if (FINISHED_SENDING_EVENTS.isEmpty()) {
+			CAN_START_NEW_THREAD = true;
+			GALog.i("OK, ready to start new thread.");
+		}
 	}
 }

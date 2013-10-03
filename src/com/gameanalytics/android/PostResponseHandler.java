@@ -57,19 +57,19 @@ public class PostResponseHandler extends AsyncHttpResponseHandler {
 
 	@Override
 	public void onStart() {
-		GameAnalytics.sendingEvents(category);
+
 	}
 
 	@Override
 	public void onFinish() {
-		GameAnalytics.finishedSendingEvents(category);
+		GameAnalytics.finishedSendingEvents(this);
 	}
 
 	@Override
 	public void onSuccess(int statusCode, String content) {
 		// Print response to log
 		GALog.i(category + " events: Succesful response: " + content);
-		eventDatabase.deleteSentEvents(eventsToDelete);
+		eventDatabase.deleteSentEvents(eventsToDelete, category);
 	}
 
 	@Override
@@ -136,5 +136,13 @@ public class PostResponseHandler extends AsyncHttpResponseHandler {
 		} else {
 			GALog.e("Error: " + error.toString(), error);
 		}
+	}
+
+	protected String getCategory() {
+		return category;
+	}
+	
+	protected int getNumberOfEvents() {
+		return eventsToDelete.size();
 	}
 };

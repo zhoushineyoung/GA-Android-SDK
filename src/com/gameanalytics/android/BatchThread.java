@@ -143,48 +143,65 @@ public class BatchThread extends Thread {
 		// Convert event lists to json using GSON
 		Gson gson = new Gson();
 		// Send events if the list is not empty
-		for (Entry<String, EventList<DesignEvent>> e : designEvents.entrySet()) {
-			eventGameKey = e.getKey();
-			eventList = e.getValue();
-			if (!eventList.isEmpty()) {
-				GALog.i("Sending " + eventList.size() + " design events.");
-				sendEventSet(gson.toJson(eventList), GameAnalytics.DESIGN,
-						eventGameKey, eventList);
-			} else
-				GALog.i("No design events to send.");
+		if (!designEvents.isEmpty()) {
+			for (Entry<String, EventList<DesignEvent>> e : designEvents
+					.entrySet()) {
+				eventGameKey = e.getKey();
+				eventList = e.getValue();
+				if (!eventList.isEmpty()) {
+					sendEventSet(gson.toJson(eventList), GameAnalytics.DESIGN,
+							eventGameKey, eventList);
+				} else {
+					GALog.i("No design events to send.");
+				}
+			}
+		} else {
+			GALog.i("No design events to send.");
 		}
-		for (Entry<String, EventList<BusinessEvent>> e : businessEvents
-				.entrySet()) {
-			eventGameKey = e.getKey();
-			eventList = e.getValue();
-			if (!eventList.isEmpty()) {
-				GALog.i("Sending " + eventList.size() + " business events.");
-				sendEventSet(gson.toJson(eventList), GameAnalytics.BUSINESS,
-						eventGameKey, eventList);
-			} else
-				GALog.i("No business events to send.");
+		if (!businessEvents.isEmpty()) {
+			for (Entry<String, EventList<BusinessEvent>> e : businessEvents
+					.entrySet()) {
+				eventGameKey = e.getKey();
+				eventList = e.getValue();
+				if (!eventList.isEmpty()) {
+					sendEventSet(gson.toJson(eventList),
+							GameAnalytics.BUSINESS, eventGameKey, eventList);
+				} else
+					GALog.i("No business events to send.");
+			}
+		} else {
+			GALog.i("No business events to send.");
 		}
-		for (Entry<String, EventList<QualityEvent>> e : qualityEvents
-				.entrySet()) {
-			eventGameKey = e.getKey();
-			eventList = e.getValue();
-			if (!eventList.isEmpty()) {
-				GALog.i("Sending " + eventList.size() + " quality events.");
-				sendEventSet(gson.toJson(eventList), GameAnalytics.QUALITY,
-						eventGameKey, eventList);
-			} else
-				GALog.i("No quality events to send.");
+		if (!qualityEvents.isEmpty()) {
+			for (Entry<String, EventList<QualityEvent>> e : qualityEvents
+					.entrySet()) {
+				eventGameKey = e.getKey();
+				eventList = e.getValue();
+				if (!eventList.isEmpty()) {
+					sendEventSet(gson.toJson(eventList), GameAnalytics.QUALITY,
+							eventGameKey, eventList);
+				} else
+					GALog.i("No quality events to send.");
+			}
+		} else {
+			GALog.i("No quality events to send.");
 		}
-		for (Entry<String, EventList<UserEvent>> e : userEvents.entrySet()) {
-			eventGameKey = e.getKey();
-			eventList = e.getValue();
-			if (!eventList.isEmpty()) {
-				GALog.i("Sending " + eventList.size() + " user events.");
-				sendEventSet(gson.toJson(eventList), GameAnalytics.USER,
-						eventGameKey, eventList);
-			} else
-				GALog.i("No user events to send.");
+		if (!userEvents.isEmpty()) {
+			for (Entry<String, EventList<UserEvent>> e : userEvents.entrySet()) {
+				eventGameKey = e.getKey();
+				eventList = e.getValue();
+				if (!eventList.isEmpty()) {
+					sendEventSet(gson.toJson(eventList), GameAnalytics.USER,
+							eventGameKey, eventList);
+				} else
+					GALog.i("No user events to send.");
+			}
+		} else {
+			GALog.i("No user events to send.");
 		}
+		// If there are no events to be sent then allow a new thread to be
+		// started
+		GameAnalytics.checkIfNoEvents();
 	}
 
 	private void sendEventSet(String json, String category,
@@ -200,7 +217,7 @@ public class BatchThread extends Thread {
 		}
 
 		// Print response if in VERBOSE mode
-		GALog.i("Raw JSON for " + category + ", game key = " + eventGameKey
+		GALog.i("Raw JSON for " + category + " events, game key = " + eventGameKey
 				+ ", events being sent to GA server: " + json);
 
 		// Add auth header
@@ -217,13 +234,17 @@ public class BatchThread extends Thread {
 					+ e.toString(), e);
 		}
 
-		client.post(
-				context,
-				GameAnalytics.API_URL + eventGameKey + category,
-				jsonEntity,
-				GameAnalytics.CONTENT_TYPE_JSON,
-				headers,
-				new PostResponseHandler(eventsToDelete, eventDatabase, category));
+		// Create handler
+		PostResponseHandler handler = new PostResponseHandler(eventsToDelete,
+				eventDatabase, category);
+
+		// Send event
+		client.post(context, GameAnalytics.API_URL + eventGameKey + category,
+				jsonEntity, GameAnalytics.CONTENT_TYPE_JSON, headers, handler);
+
+		// Notify GameAnalytics that new thread should not be sent until handler
+		// has finished
+		GameAnalytics.sendingEvents(handler);
 	}
 
 	private String getAuthorizationString(String json, String eventSecretKey) {

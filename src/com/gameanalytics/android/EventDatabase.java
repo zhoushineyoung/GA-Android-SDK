@@ -243,8 +243,10 @@ public class EventDatabase {
 		}
 	}
 
-	protected void deleteSentEvents(ArrayList<Integer> eventsToDelete) {
-		GALog.i("Deleting " + eventsToDelete.size() + " events");
+	protected void deleteSentEvents(ArrayList<Integer> eventsToDelete,
+			String category) {
+		GALog.i("Deleting " + eventsToDelete.size() + " " + category
+				+ " events");
 		String idList = "(";
 		for (Integer i : eventsToDelete) {
 			if (!idList.equals("(")) {
