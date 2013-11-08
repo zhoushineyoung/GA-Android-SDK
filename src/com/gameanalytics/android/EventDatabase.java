@@ -76,6 +76,7 @@ public class EventDatabase {
 	protected final static String INSTALL_PUBLISHER = "install_publisher";
 	protected final static String INSTALL_SITE = "install_site";
 	protected final static String INSTALL_CAMPAIGN = "install_campaign";
+	protected final static String INSTALL_ADGROUP = "install_adgroup";
 	protected final static String INSTALL_AD = "install_ad";
 	protected final static String INSTALL_KEYWORD = "install_keyword";
 	protected final static String ANDROID_ID = "android_id";
@@ -93,8 +94,9 @@ public class EventDatabase {
 			+ " text," + DEVICE + " text," + OS_MAJOR + " text," + OS_MINOR
 			+ " text," + SDK_VERSION + " text," + INSTALL_PUBLISHER + " text,"
 			+ INSTALL_SITE + " text," + INSTALL_CAMPAIGN + " text,"
-			+ INSTALL_AD + " text," + INSTALL_KEYWORD + " text," + GAME_KEY
-			+ " text," + SECRET_KEY + " text," + ANDROID_ID + " text" + ");";
+			+ INSTALL_ADGROUP + " text," + INSTALL_AD + " text,"
+			+ INSTALL_KEYWORD + " text," + GAME_KEY + " text," + SECRET_KEY
+			+ " text," + ANDROID_ID + " text" + ");";
 
 	// Database operations (SYNCHRONIZED)
 	// The following methods are synchronized so that extra events won't be
@@ -119,15 +121,15 @@ public class EventDatabase {
 		String build;
 		String eventId;
 		String area;
-		float x;
-		float y;
-		float z;
-		float value;
+		Float x = null;
+		Float y = null;
+		Float z = null;
+		Float value = null;
 		String currency;
 		int amount;
-		char gender;
-		int birthYear;
-		int friendCount;
+		Character gender = null;
+		Integer birthYear = null;
+		Integer friendCount = null;
 		String message;
 		String platform;
 		String device;
@@ -137,6 +139,7 @@ public class EventDatabase {
 		String installPublisher;
 		String installSite;
 		String installCampaign;
+		String installAdgroup;
 		String installAd;
 		String installKeyword;
 		String gameKey;
@@ -151,16 +154,24 @@ public class EventDatabase {
 				userId = cursor.getString(2);
 				sessionId = cursor.getString(3);
 				build = cursor.getString(4);
-				eventId = cursor.getString(5);
 				area = cursor.getString(6);
-				x = cursor.getFloat(7);
-				y = cursor.getFloat(8);
-				z = cursor.getFloat(9);
+				String xString = cursor.getString(7);
+				if (xString != null) {
+					x = Float.valueOf(xString);
+				}
+				String yString = cursor.getString(8);
+				if (yString != null) {
+					y = Float.valueOf(yString);
+				}
+				String zString = cursor.getString(9);
+				if (zString != null) {
+					z = Float.valueOf(zString);
+				}
 
 				// By saving gameId for every event we support the game id
 				// changing between app versions
-				gameKey = cursor.getString(27);
-				secretKey = cursor.getString(28);
+				gameKey = cursor.getString(28);
+				secretKey = cursor.getString(29);
 
 				// For backward compatibility, is gameKey null?
 				if (gameKey == null) {
@@ -173,7 +184,11 @@ public class EventDatabase {
 						designEvents.put(gameKey, new EventList<DesignEvent>(
 								secretKey));
 					}
-					value = cursor.getFloat(10);
+					eventId = cursor.getString(5);
+					String valueString = cursor.getString(10);
+					if (valueString != null) {
+						value = Float.valueOf(valueString);
+					}
 					designEvents.get(gameKey).addEvent(
 							new DesignEvent(userId, sessionId, build, eventId,
 									area, x, y, z, value), rowId);
@@ -183,6 +198,7 @@ public class EventDatabase {
 						businessEvents.put(gameKey,
 								new EventList<BusinessEvent>(secretKey));
 					}
+					eventId = cursor.getString(5);
 					currency = cursor.getString(11);
 					amount = cursor.getInt(12);
 					businessEvents.get(gameKey).addEvent(
@@ -195,9 +211,18 @@ public class EventDatabase {
 						userEvents.put(gameKey, new EventList<UserEvent>(
 								secretKey));
 					}
-					gender = cursor.getString(13).toCharArray()[0];
-					birthYear = cursor.getInt(14);
-					friendCount = cursor.getInt(15);
+					String genderString = cursor.getString(13);
+					if (genderString != null) {
+						gender = genderString.toCharArray()[0];
+					}
+					String birthYearString = cursor.getString(14);
+					if (birthYearString != null) {
+						birthYear = Integer.valueOf(birthYearString);
+					}
+					String friendCountString = cursor.getString(15);
+					if (friendCountString != null) {
+						friendCount = Integer.valueOf(friendCountString);
+					}
 					platform = cursor.getString(17);
 					device = cursor.getString(18);
 					osMajor = cursor.getString(19);
@@ -206,15 +231,16 @@ public class EventDatabase {
 					installPublisher = cursor.getString(22);
 					installSite = cursor.getString(23);
 					installCampaign = cursor.getString(24);
-					installAd = cursor.getString(25);
-					installKeyword = cursor.getString(26);
-					androidId = cursor.getString(29);
+					installAdgroup = cursor.getString(25);
+					installAd = cursor.getString(26);
+					installKeyword = cursor.getString(27);
+					androidId = cursor.getString(30);
 					userEvents.get(gameKey).addEvent(
-							new UserEvent(userId, sessionId, build, eventId,
-									area, x, y, z, gender, birthYear,
-									friendCount, platform, device, osMajor,
-									osMinor, sdkVersion, installPublisher,
-									installSite, installCampaign, installAd,
+							new UserEvent(userId, sessionId, build, area, x, y,
+									z, gender, birthYear, friendCount,
+									platform, device, osMajor, osMinor,
+									sdkVersion, installPublisher, installSite,
+									installCampaign, installAdgroup, installAd,
 									installKeyword, androidId), rowId);
 				} else if (type.equals(GameAnalytics.QUALITY)) {
 					// Create new arraylist if first event with this game id
@@ -222,6 +248,7 @@ public class EventDatabase {
 						qualityEvents.put(gameKey, new EventList<QualityEvent>(
 								secretKey));
 					}
+					eventId = cursor.getString(5);
 					message = cursor.getString(16);
 					qualityEvents.get(gameKey).addEvent(
 							new QualityEvent(userId, sessionId, build, eventId,
@@ -261,7 +288,7 @@ public class EventDatabase {
 
 	protected void addDesignEvent(String gameKey, String secretKey,
 			String userId, String sessionId, String build, String eventId,
-			String area, float x, float y, float z, float value) {
+			String area, Float x, Float y, Float z, Float value) {
 		final ContentValues values = new ContentValues();
 		values.put(GAME_KEY, gameKey);
 		values.put(SECRET_KEY, secretKey);
@@ -271,10 +298,20 @@ public class EventDatabase {
 		values.put(BUILD, build);
 		values.put(EVENT_ID, eventId);
 		values.put(AREA, area);
-		values.put(X, x);
-		values.put(Y, y);
-		values.put(Z, z);
-		values.put(VALUE, value);
+		// Position parameters are optional
+		if (x != null) {
+			values.put(X, x);
+		}
+		if (y != null) {
+			values.put(Y, y);
+		}
+		if (z != null) {
+			values.put(Z, z);
+		}
+		// Value parameter is optional
+		if (value != null) {
+			values.put(VALUE, value);
+		}
 		// Do insert on seperate thread so that if synchronization locks up the
 		// method, main thread can return.
 		new Thread() {
@@ -286,7 +323,7 @@ public class EventDatabase {
 
 	protected void addBusinessEvent(String gameKey, String secretKey,
 			String userId, String sessionId, String build, String eventId,
-			String area, float x, float y, float z, String currency, int amount) {
+			String area, Float x, Float y, Float z, String currency, int amount) {
 		final ContentValues values = new ContentValues();
 		values.put(GAME_KEY, gameKey);
 		values.put(SECRET_KEY, secretKey);
@@ -296,9 +333,16 @@ public class EventDatabase {
 		values.put(BUILD, build);
 		values.put(EVENT_ID, eventId);
 		values.put(AREA, area);
-		values.put(X, x);
-		values.put(Y, y);
-		values.put(Z, z);
+		// Position parameters are optional
+		if (x != null) {
+			values.put(X, x);
+		}
+		if (y != null) {
+			values.put(Y, y);
+		}
+		if (z != null) {
+			values.put(Z, z);
+		}
 		values.put(CURRENCY, currency);
 		values.put(AMOUNT, amount);
 		// Do insert on seperate thread so that if synchronization locks up the
@@ -311,11 +355,12 @@ public class EventDatabase {
 	}
 
 	protected void addUserEvent(String gameKey, String secretKey,
-			String userId, String sessionId, String build, String eventId,
-			String area, float x, float y, float z, char gender, int birthYear,
-			int friendCount, String platform, String device, String osMajor,
-			String osMinor, String sdkVersion, String installPublisher,
-			String installSite, String installCampaign, String installAd,
+			String userId, String sessionId, String build, String area,
+			Float x, Float y, Float z, Character gender, Integer birthYear,
+			Integer friendCount, String platform, String device,
+			String osMajor, String osMinor, String sdkVersion,
+			String installPublisher, String installSite,
+			String installCampaign, String installAdgroup, String installAd,
 			String installKeyword, String androidId) {
 		final ContentValues values = new ContentValues();
 		values.put(GAME_KEY, gameKey);
@@ -324,14 +369,27 @@ public class EventDatabase {
 		values.put(USER_ID, userId);
 		values.put(SESSION_ID, sessionId);
 		values.put(BUILD, build);
-		values.put(EVENT_ID, eventId);
 		values.put(AREA, area);
-		values.put(X, x);
-		values.put(Y, y);
-		values.put(Z, z);
-		values.put(GENDER, String.valueOf(gender));
-		values.put(BIRTH_YEAR, birthYear);
-		values.put(FRIEND_COUNT, friendCount);
+		// Position parameters are optional
+		if (x != null) {
+			values.put(X, x);
+		}
+		if (y != null) {
+			values.put(Y, y);
+		}
+		if (z != null) {
+			values.put(Z, z);
+		}
+		// User info parameters are optional
+		if (gender != null) {
+			values.put(GENDER, String.valueOf(gender));
+		}
+		if (birthYear != null) {
+			values.put(BIRTH_YEAR, birthYear);
+		}
+		if (friendCount != null) {
+			values.put(FRIEND_COUNT, friendCount);
+		}
 		values.put(PLATFORM, platform);
 		values.put(DEVICE, device);
 		values.put(OS_MAJOR, osMajor);
@@ -340,6 +398,7 @@ public class EventDatabase {
 		values.put(INSTALL_PUBLISHER, installPublisher);
 		values.put(INSTALL_SITE, installSite);
 		values.put(INSTALL_CAMPAIGN, installCampaign);
+		values.put(INSTALL_ADGROUP, installAdgroup);
 		values.put(INSTALL_AD, installAd);
 		values.put(INSTALL_KEYWORD, installKeyword);
 		values.put(ANDROID_ID, androidId);
@@ -354,7 +413,7 @@ public class EventDatabase {
 
 	protected void addQualityEvent(String gameKey, String secretKey,
 			String userId, String sessionId, String build, String eventId,
-			String area, float x, float y, float z, String message) {
+			String area, Float x, Float y, Float z, String message) {
 		final ContentValues values = new ContentValues();
 		values.put(GAME_KEY, gameKey);
 		values.put(SECRET_KEY, secretKey);
@@ -364,9 +423,16 @@ public class EventDatabase {
 		values.put(BUILD, build);
 		values.put(EVENT_ID, eventId);
 		values.put(AREA, area);
-		values.put(X, x);
-		values.put(Y, y);
-		values.put(Z, z);
+		// Position parameters are optional
+		if (x != null) {
+			values.put(X, x);
+		}
+		if (y != null) {
+			values.put(Y, y);
+		}
+		if (z != null) {
+			values.put(Z, z);
+		}
 		values.put(MESSAGE, message);
 		// Do insert on seperate thread so that if synchronization locks up the
 		// method, main thread can return.
@@ -431,6 +497,7 @@ public class EventDatabase {
 					db.execSQL(addColumn + INSTALL_PUBLISHER + text);
 					db.execSQL(addColumn + INSTALL_SITE + text);
 					db.execSQL(addColumn + INSTALL_CAMPAIGN + text);
+					db.execSQL(addColumn + INSTALL_ADGROUP + text);
 					db.execSQL(addColumn + INSTALL_AD + text);
 					db.execSQL(addColumn + INSTALL_KEYWORD + text);
 					db.execSQL(addColumn + GAME_KEY + text);

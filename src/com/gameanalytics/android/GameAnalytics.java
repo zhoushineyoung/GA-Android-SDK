@@ -77,9 +77,7 @@ public class GameAnalytics {
 
 	// PRECONFIGURED EVENTS
 	private static final String FPS_EVENT_NAME = "GA:AverageFPS";
-	// TODO: What event should we use, change in javadoc too
 	private static final String CRITICAL_FPS_EVENT_NAME = "GA:CriticalFPS";
-	private static final String USER_INFO_EVENT_NAME = "GA:UserInfo";
 	private static final String REFERRAL_EVENT_NAME = "GA:Referral";
 	private static final String ANDROID_VERSION_EVENT_NAME = "GA:AndroidVersion:";
 	private static final String MODEL_EVENT_NAME = "GA:Model:";
@@ -220,13 +218,12 @@ public class GameAnalytics {
 	 * Call this method in every activity's onPause() method to ensure correct
 	 * session logging.
 	 * 
-	 * @param CONTEXT
-	 *            the calling activity
 	 */
 	public static void stopSession() {
 		// sessionTimeOut is some time after now
 		SESSION_END_TIME = System.currentTimeMillis() + SESSION_TIME_OUT;
 		SESSION_STARTED = false;
+		CONTEXT = null;
 	}
 
 	/**
@@ -246,8 +243,8 @@ public class GameAnalytics {
 	 * @param z
 	 *            position on z-axis
 	 */
-	public static void newDesignEvent(String eventId, float value, String area,
-			float x, float y, float z) {
+	public static void newDesignEvent(String eventId, Float value, String area,
+			Float x, Float y, Float z) {
 		if (ready()) {
 			GALog.i("New design event: " + eventId + ", value: " + value
 					+ ", area: " + area + ", pos: (" + x + ", " + y + ", " + z
@@ -268,11 +265,23 @@ public class GameAnalytics {
 	 * 
 	 * @param eventId
 	 *            use colons to denote subtypes, e.g. 'PickedUpAmmo:Shotgun'
+	 */
+	public static void newDesignEvent(String eventId) {
+		newDesignEvent(eventId, null);
+	}
+
+	/**
+	 * Add a new design event to the event stack. This will be sent off in a
+	 * batched array after the time interval set using setTimeInterval(). The
+	 * current activity will be used as the 'area' value for the event.
+	 * 
+	 * @param eventId
+	 *            use colons to denote subtypes, e.g. 'PickedUpAmmo:Shotgun'
 	 * @param value
 	 *            numeric value associated with event e.g. number of shells
 	 */
-	public static void newDesignEvent(String eventId, float value) {
-		newDesignEvent(eventId, value, AREA, 0, 0, 0);
+	public static void newDesignEvent(String eventId, Float value) {
+		newDesignEvent(eventId, value, AREA, null, null, null);
 	}
 
 	/**
@@ -294,7 +303,7 @@ public class GameAnalytics {
 	 *            position on z-axis
 	 */
 	public static void newQualityEvent(String eventId, String message,
-			String area, float x, float y, float z) {
+			String area, Float x, Float y, Float z) {
 		if (ready()) {
 			GALog.i("New quality event: " + eventId + ", message: " + message
 					+ ", area: " + area + ", pos: (" + x + ", " + y + ", " + z
@@ -319,8 +328,23 @@ public class GameAnalytics {
 	 * @param message
 	 *            message associated with event e.g. the stack trace
 	 */
+	public static void newQualityEvent(String eventId) {
+		newQualityEvent(eventId, null);
+	}
+
+	/**
+	 * Add a new quality event to the event stack. This will be sent off in a
+	 * batched array after the time interval set using setTimeInterval(). The
+	 * current activity will be used as the 'area' value for the event.
+	 * 
+	 * @param eventId
+	 *            use colons to denote subtypes, e.g.
+	 *            'Exception:NullPointerException'
+	 * @param message
+	 *            message associated with event e.g. the stack trace
+	 */
 	public static void newQualityEvent(String eventId, String message) {
-		newQualityEvent(eventId, message, AREA, 0, 0, 0);
+		newQualityEvent(eventId, message, AREA, null, null, null);
 	}
 
 	// This is the privately accessible method to send all user event data.
@@ -328,30 +352,30 @@ public class GameAnalytics {
 	// 1. setUserInfo(char gender, int birthYear, int friendCount)
 	// 2. setReferralInfo(String installPublisher, String installSite, String
 	// installCampaign, String installAd, String installKeyword)
-	private static void newUserEvent(String eventId, char gender,
-			int birthYear, int friendCount, String area, float x, float y,
-			float z, String platform, String device, String osMajor,
-			String osMinor, String sdkVersion, String installPublisher,
-			String installSite, String installCampaign, String installAd,
+	private static void newUserEvent(Character gender, Integer birthYear,
+			Integer friendCount, String area, Float x, Float y, Float z,
+			String platform, String device, String osMajor, String osMinor,
+			String sdkVersion, String installPublisher, String installSite,
+			String installCampaign, String installAdgroup, String installAd,
 			String installKeyword, String androidId) {
 		if (ready()) {
-			GALog.i("New user event: " + eventId + ", gender: " + gender
-					+ ", birthYear: " + birthYear + ", friendCount: "
-					+ friendCount + ", area: " + area + ", pos: (" + x + ", "
-					+ y + ", " + z + ", " + platform + ", " + device + ", "
-					+ osMajor + ", " + osMinor + ", " + sdkVersion + ", "
-					+ installPublisher + ", " + installSite + ", "
-					+ installCampaign + ", " + installAd + ", "
-					+ installKeyword + ", " + androidId + ")");
+			GALog.i("New user event: gender: " + gender + ", birthYear: "
+					+ birthYear + ", friendCount: " + friendCount + ", area: "
+					+ area + ", pos: (" + x + ", " + y + ", " + z + ", "
+					+ platform + ", " + device + ", " + osMajor + ", "
+					+ osMinor + ", " + sdkVersion + ", " + installPublisher
+					+ ", " + installSite + ", " + installCampaign + ", "
+					+ installAdgroup + ", " + installAd + ", " + installKeyword
+					+ ", " + androidId + ")");
 			// Ensure we have a BatchThread ready to receive events
 			startThreadIfReq();
 
 			// Add user event to batch stack
 			EVENT_DATABASE.addUserEvent(GAME_KEY, SECRET_KEY, USER_ID,
-					SESSION_ID, BUILD, eventId, area, x, y, z, gender,
-					birthYear, friendCount, platform, device, osMajor, osMinor,
+					SESSION_ID, BUILD, area, x, y, z, gender, birthYear,
+					friendCount, platform, device, osMajor, osMinor,
 					sdkVersion, installPublisher, installSite, installCampaign,
-					installAd, installKeyword, androidId);
+					installAdgroup, installAd, installKeyword, androidId);
 		}
 	}
 
@@ -371,11 +395,10 @@ public class GameAnalytics {
 	 * 
 	 * @deprecated use {@link setUserInfo()} instead.
 	 */
-	public static void newUserEvent(String eventId, char gender, int birthYear,
-			int friendCount) {
-		newUserEvent(eventId, gender, birthYear, friendCount, AREA, 0, 0, 0,
-				null, null, null, null, null, null, null, null, null, null,
-				UNHASHED_ANDROID_ID);
+	public static void newUserEvent(String eventId, Character gender,
+			Integer birthYear, Integer friendCount) {
+		newUserEvent(eventId, gender, birthYear, friendCount, AREA, null, null,
+				null);
 	}
 
 	/**
@@ -402,15 +425,17 @@ public class GameAnalytics {
 	 * 
 	 * @deprecated use {@link setUserInfo()} instead.
 	 */
-	public static void newUserEvent(String eventId, char gender, int birthYear,
-			int friendCount, String area, float x, float y, float z) {
-		newUserEvent(eventId, gender, birthYear, friendCount, area, x, y, z,
-				null, null, null, null, null, null, null, null, null, null,
+	public static void newUserEvent(String eventId, Character gender,
+			Integer birthYear, Integer friendCount, String area, Float x,
+			Float y, Float z) {
+		newUserEvent(gender, birthYear, friendCount, area, x, y, z, null, null,
+				null, null, null, null, null, null, null, null, null,
 				UNHASHED_ANDROID_ID);
 	}
 
 	/**
-	 * Send user info to the Game Analytics server.
+	 * Send user info to the Game Analytics server. All parameters are optional,
+	 * pass in 'null' if you do not have the data.
 	 * 
 	 * @param gender
 	 *            user gender, use 'm' for male, 'f' for female
@@ -419,14 +444,16 @@ public class GameAnalytics {
 	 * @param friendCount
 	 *            number of friends
 	 */
-	public static void setUserInfo(char gender, int birthYear, int friendCount) {
-		newUserEvent(USER_INFO_EVENT_NAME, gender, birthYear, friendCount,
-				AREA, 0, 0, 0, null, null, null, null, null, null, null, null,
-				null, null, UNHASHED_ANDROID_ID);
+	public static void setUserInfo(Character gender, Integer birthYear,
+			Integer friendCount) {
+		newUserEvent(gender, birthYear, friendCount, AREA, null, null, null,
+				null, null, null, null, null, null, null, null, null, null,
+				null, UNHASHED_ANDROID_ID);
 	}
 
 	/**
-	 * Manually send referral info to the Game Analytics server.
+	 * Manually send referral info to the Game Analytics server. All parameters
+	 * are optional, use 'null' if you do not have the data.
 	 * 
 	 * For automatic referrals, extend ReferralReceiver class set up as
 	 * broadcast receiver in Android Manifest.
@@ -443,12 +470,13 @@ public class GameAnalytics {
 	 *            e.g. rts mobile game
 	 */
 	public static void setReferralInfo(String installPublisher,
-			String installSite, String installCampaign, String installAd,
-			String installKeyword) {
+			String installSite, String installCampaign, String installAdgroup,
+			String installAd, String installKeyword) {
 		// User event for GA
-		newUserEvent(REFERRAL_EVENT_NAME, 'n', 0, 0, AREA, 0, 0, 0, null, null,
+		newUserEvent(null, null, null, AREA, null, null, null, null, null,
 				null, null, null, installPublisher, installSite,
-				installCampaign, installAd, installKeyword, UNHASHED_ANDROID_ID);
+				installCampaign, installAdgroup, installAd, installKeyword,
+				UNHASHED_ANDROID_ID);
 
 		// Quality event for Dev
 		String qualityEventString = REFERRAL_EVENT_NAME;
@@ -460,6 +488,9 @@ public class GameAnalytics {
 		}
 		if (installCampaign != null) {
 			qualityEventString += ":" + installCampaign;
+		}
+		if (installAdgroup != null) {
+			qualityEventString += ":" + installAdgroup;
 		}
 		if (installAd != null) {
 			qualityEventString += ":" + installAd;
@@ -494,7 +525,7 @@ public class GameAnalytics {
 	 *            position on z-axis
 	 */
 	public static void newBusinessEvent(String eventId, String currency,
-			int amount, String area, float x, float y, float z) {
+			int amount, String area, Float x, Float y, Float z) {
 		if (ready()) {
 			GALog.i("New business event: " + eventId + ", currency: "
 					+ currency + ", amount: " + amount + ", area: " + area
@@ -525,7 +556,7 @@ public class GameAnalytics {
 	 */
 	public static void newBusinessEvent(String eventId, String currency,
 			int amount) {
-		newBusinessEvent(eventId, currency, amount, AREA, 0, 0, 0);
+		newBusinessEvent(eventId, currency, amount, AREA, null, null, null);
 	}
 
 	/**
@@ -600,7 +631,7 @@ public class GameAnalytics {
 	 * @param z
 	 *            (optional)
 	 */
-	public static void stopLoggingFPS(String area, float x, float y, float z) {
+	public static void stopLoggingFPS(String area, Float x, Float y, Float z) {
 		if (ready()) {
 			GALog.i("Stop logging FPS.");
 			// Ensure we are logging FPS?
@@ -611,7 +642,7 @@ public class GameAnalytics {
 				// Has enough time elapsed?
 				if (elapsed > MINIMUM_FPS_PERIOD) {
 					// Work out average FPS and send
-					int fps = (int) (FPS_FRAMES * 1000 / elapsed);
+					Float fps = (float) (FPS_FRAMES * 1000 / elapsed);
 					newDesignEvent(FPS_EVENT_NAME, fps, area, x, y, z);
 					if (fps < CRITICAL_FPS_LIMIT) {
 						// FPS is below critical limit
@@ -638,7 +669,7 @@ public class GameAnalytics {
 	 * parameter.
 	 */
 	public static void stopLoggingFPS() {
-		stopLoggingFPS(AREA, 0, 0, 0);
+		stopLoggingFPS(AREA, null, null, null);
 	}
 
 	/**
@@ -746,15 +777,18 @@ public class GameAnalytics {
 	 * If there is no connection it will simply return.
 	 */
 	public static void manualBatch() {
-		if (CAN_START_NEW_THREAD) {
-			GALog.i("Starting manual batch.");
-			BatchThread sendEventThread = new BatchThread(CONTEXT, CLIENT,
-					EVENT_DATABASE, GAME_KEY, SECRET_KEY, SEND_EVENT_INTERVAL,
-					NETWORK_POLL_INTERVAL, CACHE_LOCALLY);
-			CAN_START_NEW_THREAD = false;
-			sendEventThread.manualBatch();
-		} else {
-			GALog.w("Warning: GameAnalytics batch thread already started, wait for it to finish before starting another.");
+		if (ready()) {
+			if (CAN_START_NEW_THREAD) {
+				GALog.i("Starting manual batch.");
+				BatchThread sendEventThread = new BatchThread(CONTEXT, CLIENT,
+						EVENT_DATABASE, GAME_KEY, SECRET_KEY,
+						SEND_EVENT_INTERVAL, NETWORK_POLL_INTERVAL,
+						CACHE_LOCALLY);
+				CAN_START_NEW_THREAD = false;
+				sendEventThread.manualBatch();
+			} else {
+				GALog.w("Warning: GameAnalytics batch thread already started, wait for it to finish before starting another.");
+			}
 		}
 	}
 
@@ -763,7 +797,7 @@ public class GameAnalytics {
 			if (SESSION_STARTED) {
 				return true;
 			} else {
-				GALog.w("Warning: GameAnalytics session has not started. Call GameAnalytics.startSession(Context context) in onResume().");
+				GALog.w("Warning: GameAnalytics session has not started. 1. Have you called GameAnalytics.startSession(Context context) in onResume()? OR 2. Are you trying to send events prior to onResume() being called, for example in onCreate()? You need to call startSession() before sending your first event.");
 			}
 		} else {
 			GALog.w("Warning: GameAnalytics has not been initialised. Call GameAnalytics.initialise(Context context, String secretKey, String gameKey) first");
@@ -824,13 +858,14 @@ public class GameAnalytics {
 		newQualityEvent(MODEL_EVENT_NAME + android.os.Build.MODEL,
 				"Max memory = " + memory + " mb");
 		newQualityEvent(ANDROID_VERSION_EVENT_NAME
-				+ android.os.Build.VERSION.RELEASE, "");
+				+ android.os.Build.VERSION.RELEASE, null);
 
 		// For GA
-		newUserEvent(USER_INFO_EVENT_NAME, 'n', 0, 0, AREA, 0, 0, 0, ANDROID,
-				android.os.Build.MODEL, null, ANDROID + " "
-						+ android.os.Build.VERSION.RELEASE, SDK_VERSION, null,
-				null, null, null, null, UNHASHED_ANDROID_ID);
+		newUserEvent(null, null, null, AREA, null, null, null, ANDROID,
+				android.os.Build.MODEL, ANDROID + " "
+						+ android.os.Build.VERSION.RELEASE.substring(0, 3),
+				ANDROID + " " + android.os.Build.VERSION.RELEASE, SDK_VERSION,
+				null, null, null, null, null, null, UNHASHED_ANDROID_ID);
 	}
 
 	protected static void sendingEvents(PostResponseHandler handler) {
@@ -855,6 +890,20 @@ public class GameAnalytics {
 		if (FINISHED_SENDING_EVENTS.isEmpty()) {
 			CAN_START_NEW_THREAD = true;
 			GALog.i("OK, ready to start new thread.");
+		}
+	}
+
+	/**
+	 * The userId that the SDK uses to track each individual user on the server.
+	 * 
+	 * @return the user id or null if the SDK is not initialised.
+	 */
+	public static String getUserId() {
+		if (INITIALISED) {
+			return USER_ID;
+		} else {
+			GALog.w("Warning: GameAnalytics has not been initialised. Call GameAnalytics.initialise(Context context, String secretKey, String gameKey) first");
+			return null;
 		}
 	}
 }

@@ -35,7 +35,6 @@ public class MainActivity extends Activity {
 		GameAnalytics.setNetworkPollInterval(30000);
 		GameAnalytics.setSendEventsInterval(10000);
 		GameAnalytics.setSessionTimeOut(2000);
-
 	}
 
 	public void onDesign(View v) {
@@ -61,7 +60,7 @@ public class MainActivity extends Activity {
 	public void onReferral(View v) {
 		// All referral terms are optional, use null to leave out
 		GameAnalytics.setReferralInfo("Game Analytics Test", "Demo Homepage",
-				null, "Download button", null);
+				null, null, "Download button", null);
 	}
 
 	/** SESSIONING INFO **/

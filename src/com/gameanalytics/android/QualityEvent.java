@@ -26,15 +26,15 @@ public class QualityEvent{
 	private String build;
 	private String event_id;
 	private String area;
-	private float x;
-	private float y;
-	private float z;
+	private Float x;
+	private Float y;
+	private Float z;
 
 	// QUALITY
 	private String message;
 
 	public QualityEvent(String user_id, String session_id, String build,
-			String event_id, String area, float x, float y, float z,
+			String event_id, String area, Float x, Float y, Float z,
 			String message) {
 		this.user_id = user_id;
 		this.session_id = session_id;

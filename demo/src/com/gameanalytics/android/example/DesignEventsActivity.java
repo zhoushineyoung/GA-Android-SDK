@@ -57,7 +57,7 @@ public class DesignEventsActivity extends GameAnalyticsActivity implements
 
 		// Log event with the number of icons created. This way we can see how
 		// many of our users keep created icons until the engine chugs at 2fps!
-		GameAnalytics.newDesignEvent("IconCreated", icons.size());
+		GameAnalytics.newDesignEvent("IconCreated", (float) icons.size());
 	}
 
 	// Gets called every time a frame is to be drawn on GLSurfaceView:

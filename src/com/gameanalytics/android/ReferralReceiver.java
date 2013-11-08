@@ -85,12 +85,12 @@ public abstract class ReferralReceiver extends BroadcastReceiver {
 		if (GameAnalytics.isSessionStarted()) {
 			// Send referral info
 			GameAnalytics.setReferralInfo(installPublisher, installSite,
-					installCampaign, installAd, installKeyword);
+					installCampaign, null, installAd, installKeyword);
 		} else {
 			GameAnalytics.startSession(context);
 			// Send referral info
 			GameAnalytics.setReferralInfo(installPublisher, installSite,
-					installCampaign, installAd, installKeyword);
+					installCampaign, null, installAd, installKeyword);
 			GameAnalytics.stopSession();
 		}
 	}
