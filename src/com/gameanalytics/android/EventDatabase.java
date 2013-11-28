@@ -81,8 +81,9 @@ public class EventDatabase {
 	protected final static String INSTALL_KEYWORD = "install_keyword";
 	protected final static String ANDROID_ID = "android_id";
 
-	// Quality
+	// Quality & Error
 	protected final static String MESSAGE = "message";
+	protected final static String SEVERITY = "severity";
 
 	protected final static String CREATE_TABLE = "create table " + TABLENAME
 			+ " (" + ROW_ID + " integer primary key autoincrement not null,"
@@ -96,7 +97,7 @@ public class EventDatabase {
 			+ INSTALL_SITE + " text," + INSTALL_CAMPAIGN + " text,"
 			+ INSTALL_ADGROUP + " text," + INSTALL_AD + " text,"
 			+ INSTALL_KEYWORD + " text," + GAME_KEY + " text," + SECRET_KEY
-			+ " text," + ANDROID_ID + " text" + ");";
+			+ " text," + ANDROID_ID + " text," + SEVERITY + " text" + ");";
 
 	// Database operations (SYNCHRONIZED)
 	// The following methods are synchronized so that extra events won't be
@@ -112,6 +113,7 @@ public class EventDatabase {
 		HashMap<String, EventList<UserEvent>> userEvents = new HashMap<String, EventList<UserEvent>>();
 		HashMap<String, EventList<BusinessEvent>> businessEvents = new HashMap<String, EventList<BusinessEvent>>();
 		HashMap<String, EventList<QualityEvent>> qualityEvents = new HashMap<String, EventList<QualityEvent>>();
+		HashMap<String, EventList<ErrorEvent>> errorEvents = new HashMap<String, EventList<ErrorEvent>>();
 
 		// Columns
 		int rowId;
@@ -145,6 +147,7 @@ public class EventDatabase {
 		String gameKey;
 		String secretKey;
 		String androidId;
+		String severity;
 
 		// Populate ArrayLists
 		if (cursor.moveToFirst()) {
@@ -253,6 +256,17 @@ public class EventDatabase {
 					qualityEvents.get(gameKey).addEvent(
 							new QualityEvent(userId, sessionId, build, eventId,
 									area, x, y, z, message), rowId);
+				} else if (type.equals(GameAnalytics.ERROR)) {
+					// Create new arraylist if first event with this game id
+					if (errorEvents.get(gameKey) == null) {
+						errorEvents.put(gameKey, new EventList<ErrorEvent>(
+								secretKey));
+					}
+					message = cursor.getString(16);
+					severity = cursor.getString(31);
+					errorEvents.get(gameKey).addEvent(
+							new ErrorEvent(userId, sessionId, build, area, x,
+									y, z, message, severity), rowId);
 				}
 				cursor.moveToNext();
 			}
@@ -261,7 +275,7 @@ public class EventDatabase {
 
 		// Return Hashmaps
 		return new Object[] { designEvents, businessEvents, userEvents,
-				qualityEvents };
+				qualityEvents, errorEvents };
 	}
 
 	synchronized private void insert(ContentValues values) {
@@ -443,6 +457,38 @@ public class EventDatabase {
 		}.start();
 	}
 
+	protected void addErrorEvent(String gameKey, String secretKey,
+			String userId, String sessionId, String build, String area,
+			Float x, Float y, Float z, String message, String severity) {
+		final ContentValues values = new ContentValues();
+		values.put(GAME_KEY, gameKey);
+		values.put(SECRET_KEY, secretKey);
+		values.put(TYPE, GameAnalytics.ERROR);
+		values.put(USER_ID, userId);
+		values.put(SESSION_ID, sessionId);
+		values.put(BUILD, build);
+		values.put(AREA, area);
+		// Position parameters are optional
+		if (x != null) {
+			values.put(X, x);
+		}
+		if (y != null) {
+			values.put(Y, y);
+		}
+		if (z != null) {
+			values.put(Z, z);
+		}
+		values.put(MESSAGE, message);
+		values.put(SEVERITY, severity);
+		// Do insert on seperate thread so that if synchronization locks up the
+		// method, main thread can return.
+		new Thread() {
+			public void run() {
+				insert(values);
+			}
+		}.start();
+	}
+
 	private boolean isFull() {
 		Cursor cursor = db.query(TABLENAME, new String[] { ROW_ID }, null,
 				null, null, null, null);
@@ -466,7 +512,7 @@ public class EventDatabase {
 
 		// Database details
 		private final static String DB_NAME = "GameAnalytics";
-		private final static int DB_VERSION = 2;
+		private final static int DB_VERSION = 3;
 
 		public OpenHelper(Context context) {
 			super(context, DB_NAME, null, DB_VERSION);
@@ -484,11 +530,11 @@ public class EventDatabase {
 		public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
 			// Version 1 - ORIGINAL
 			// Version 2 - Added optional user fields
+			// Version 3 - Added severity column
 			if (newVersion > oldVersion) {
-				if (oldVersion == 1) {
-					String addColumn = "ALTER TABLE " + TABLENAME
-							+ " ADD COLUMN ";
-					String text = " text";
+				String addColumn = "ALTER TABLE " + TABLENAME + " ADD COLUMN ";
+				String text = " text";
+				if (oldVersion <= 1) {
 					db.execSQL(addColumn + PLATFORM + text);
 					db.execSQL(addColumn + DEVICE + text);
 					db.execSQL(addColumn + OS_MAJOR + text);
@@ -503,6 +549,9 @@ public class EventDatabase {
 					db.execSQL(addColumn + GAME_KEY + text);
 					db.execSQL(addColumn + SECRET_KEY + text);
 					db.execSQL(addColumn + ANDROID_ID + text);
+				}
+				if (oldVersion <= 2) {
+					db.execSQL(addColumn + SEVERITY + text);
 				}
 			}
 		}

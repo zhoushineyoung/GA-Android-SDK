@@ -136,6 +136,7 @@ public class BatchThread extends Thread {
 		HashMap<String, EventList<BusinessEvent>> businessEvents = (HashMap<String, EventList<BusinessEvent>>) eventLists[1];
 		HashMap<String, EventList<UserEvent>> userEvents = (HashMap<String, EventList<UserEvent>>) eventLists[2];
 		HashMap<String, EventList<QualityEvent>> qualityEvents = (HashMap<String, EventList<QualityEvent>>) eventLists[3];
+		HashMap<String, EventList<ErrorEvent>> errorEvents = (HashMap<String, EventList<ErrorEvent>>) eventLists[4];
 
 		// For each game id and event array
 		String eventGameKey;
@@ -151,8 +152,6 @@ public class BatchThread extends Thread {
 				if (!eventList.isEmpty()) {
 					sendEventSet(gson.toJson(eventList), GameAnalytics.DESIGN,
 							eventGameKey, eventList);
-				} else {
-					GALog.i("No design events to send.");
 				}
 			}
 		} else {
@@ -166,8 +165,7 @@ public class BatchThread extends Thread {
 				if (!eventList.isEmpty()) {
 					sendEventSet(gson.toJson(eventList),
 							GameAnalytics.BUSINESS, eventGameKey, eventList);
-				} else
-					GALog.i("No business events to send.");
+				}
 			}
 		} else {
 			GALog.i("No business events to send.");
@@ -180,8 +178,7 @@ public class BatchThread extends Thread {
 				if (!eventList.isEmpty()) {
 					sendEventSet(gson.toJson(eventList), GameAnalytics.QUALITY,
 							eventGameKey, eventList);
-				} else
-					GALog.i("No quality events to send.");
+				}
 			}
 		} else {
 			GALog.i("No quality events to send.");
@@ -193,11 +190,23 @@ public class BatchThread extends Thread {
 				if (!eventList.isEmpty()) {
 					sendEventSet(gson.toJson(eventList), GameAnalytics.USER,
 							eventGameKey, eventList);
-				} else
-					GALog.i("No user events to send.");
+				}
 			}
 		} else {
 			GALog.i("No user events to send.");
+		}
+		if (!errorEvents.isEmpty()) {
+			for (Entry<String, EventList<ErrorEvent>> e : errorEvents
+					.entrySet()) {
+				eventGameKey = e.getKey();
+				eventList = e.getValue();
+				if (!eventList.isEmpty()) {
+					sendEventSet(gson.toJson(eventList), GameAnalytics.ERROR,
+							eventGameKey, eventList);
+				}
+			}
+		} else {
+			GALog.i("No error events to send.");
 		}
 		// If there are no events to be sent then allow a new thread to be
 		// started
@@ -217,8 +226,8 @@ public class BatchThread extends Thread {
 		}
 
 		// Print response if in VERBOSE mode
-		GALog.i("Raw JSON for " + category + " events, game key = " + eventGameKey
-				+ ", events being sent to GA server: " + json);
+		GALog.i("Raw JSON for " + category + " events, game key = "
+				+ eventGameKey + ", events being sent to GA server: " + json);
 
 		// Add auth header
 		Header[] headers = new Header[1];

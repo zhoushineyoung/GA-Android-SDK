@@ -24,10 +24,12 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+
 import android.content.Context;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.provider.Settings.Secure;
 import android.text.format.Time;
+
 import com.loopj.twicecircled.android.http.AsyncHttpClient;
 
 /**
@@ -60,6 +62,7 @@ public class GameAnalytics {
 	protected static final String USER = "user";
 	protected static final String QUALITY = "quality";
 	protected static final String BUSINESS = "business";
+	protected static final String ERROR = "error";
 
 	// APP/DEVELOPER SPECIFIC
 	private static String GAME_KEY;
@@ -78,11 +81,15 @@ public class GameAnalytics {
 	// PRECONFIGURED EVENTS
 	private static final String FPS_EVENT_NAME = "GA:AverageFPS";
 	private static final String CRITICAL_FPS_EVENT_NAME = "GA:CriticalFPS";
-	private static final String REFERRAL_EVENT_NAME = "GA:Referral";
-	private static final String ANDROID_VERSION_EVENT_NAME = "GA:AndroidVersion:";
-	private static final String MODEL_EVENT_NAME = "GA:Model:";
 	private static final String ANDROID = "Android";
-	private static final String SDK_VERSION = "GA Android SDK 1.10";
+	private static final String SDK_VERSION = "GA Android SDK 1.11";
+
+	// ERROR EVENT SEVERITY TYPES
+	public static final Severity CRITICAL_SEVERITY = new Severity("critical");
+	public static final Severity ERROR_SEVERITY = new Severity("error");
+	public static final Severity WARNING_SEVERITY = new Severity("warning");
+	public static final Severity INFO_SEVERITY = new Severity("info");
+	public static final Severity DEBUG_SEVERITY = new Severity("debug");
 
 	// OTHER
 	private static AsyncHttpClient CLIENT;
@@ -301,6 +308,8 @@ public class GameAnalytics {
 	 *            position on y-axis
 	 * @param z
 	 *            position on z-axis
+	 * 
+	 * @deprecated use {@link newErrorEvent()} instead.
 	 */
 	public static void newQualityEvent(String eventId, String message,
 			String area, Float x, Float y, Float z) {
@@ -327,6 +336,7 @@ public class GameAnalytics {
 	 *            'Exception:NullPointerException'
 	 * @param message
 	 *            message associated with event e.g. the stack trace
+	 * @deprecated use {@link newErrorEvent()} instead.
 	 */
 	public static void newQualityEvent(String eventId) {
 		newQualityEvent(eventId, null);
@@ -342,9 +352,63 @@ public class GameAnalytics {
 	 *            'Exception:NullPointerException'
 	 * @param message
 	 *            message associated with event e.g. the stack trace
+	 * @deprecated use {@link newErrorEvent()} instead.
 	 */
 	public static void newQualityEvent(String eventId, String message) {
 		newQualityEvent(eventId, message, AREA, null, null, null);
+	}
+
+	/**
+	 * Add a new error event to the event stack. This will be sent off in a
+	 * batched array after the time interval set using setTimeInterval().
+	 * 
+	 * @param message
+	 *            message associated with the error e.g. the stack trace
+	 * @param severity
+	 *            severity of error, use GameAnalytics.CRITICAL,
+	 *            GameAnalytics.ERROR, GameAnalytics.WARNING, GameAnalytics.INFO
+	 *            or GameAnalytics.DEBUG.
+	 * @param area
+	 *            area/level associated with the event
+	 * @param x
+	 *            position on x-axis
+	 * @param y
+	 *            position on y-axis
+	 * @param z
+	 *            position on z-axis
+	 */
+	public static void newErrorEvent(String message, Severity severity,
+			String area, Float x, Float y, Float z) {
+		if (ready()) {
+			if (doErrorSeverityCheck(severity)) {
+				GALog.i("New error event: message: " + message + ", severity: "
+						+ severity + ", area: " + area + ", pos: (" + x + ", "
+						+ y + ", " + z + ")");
+				// Ensure we have a BatchThread ready to receive events
+				startThreadIfReq();
+
+				// Add quality event to batch stack
+				EVENT_DATABASE.addErrorEvent(GAME_KEY, SECRET_KEY, USER_ID,
+						SESSION_ID, BUILD, area, x, y, z, message,
+						severity.toString());
+			}
+		}
+	}
+
+	/**
+	 * Add a new error event to the event stack. This will be sent off in a
+	 * batched array after the time interval set using setTimeInterval(). The
+	 * current activity will be used as the 'area' value for the event.
+	 * 
+	 * @param message
+	 *            message associated with the error e.g. the stack trace
+	 * @param severity
+	 *            severity of error, use GameAnalytics.CRITICAL,
+	 *            GameAnalytics.ERROR, GameAnalytics.WARNING, GameAnalytics.INFO
+	 *            or GameAnalytics.DEBUG.
+	 */
+	public static void newErrorEvent(String message, Severity severity) {
+		newErrorEvent(message, severity, AREA, null, null, null);
 	}
 
 	// This is the privately accessible method to send all user event data.
@@ -376,6 +440,17 @@ public class GameAnalytics {
 					friendCount, platform, device, osMajor, osMinor,
 					sdkVersion, installPublisher, installSite, installCampaign,
 					installAdgroup, installAd, installKeyword, androidId);
+		}
+	}
+
+	private static boolean doErrorSeverityCheck(Severity severity) {
+		if (CRITICAL_SEVERITY == severity || ERROR_SEVERITY == severity
+				|| WARNING_SEVERITY == severity || INFO_SEVERITY == severity
+				|| DEBUG_SEVERITY == severity) {
+			return true;
+		} else {
+			GALog.w("Warning: unsupported severity level passed into newErrorEvent(), use GameAnalyics.CRITICAL, GameAnalyics.ERROR etc.");
+			return false;
 		}
 	}
 
@@ -477,32 +552,6 @@ public class GameAnalytics {
 				null, null, null, installPublisher, installSite,
 				installCampaign, installAdgroup, installAd, installKeyword,
 				UNHASHED_ANDROID_ID);
-
-		// Quality event for Dev
-		String qualityEventString = REFERRAL_EVENT_NAME;
-		if (installPublisher != null) {
-			qualityEventString += ":" + installPublisher;
-		}
-		if (installSite != null) {
-			qualityEventString += ":" + installSite;
-		}
-		if (installCampaign != null) {
-			qualityEventString += ":" + installCampaign;
-		}
-		if (installAdgroup != null) {
-			qualityEventString += ":" + installAdgroup;
-		}
-		if (installAd != null) {
-			qualityEventString += ":" + installAd;
-		}
-		if (installKeyword != null) {
-			qualityEventString += ":" + installKeyword;
-		}
-
-		// Send quality event as long as there is at least one referral term
-		if (!qualityEventString.equals(REFERRAL_EVENT_NAME)) {
-			newQualityEvent(qualityEventString, "");
-		}
 	}
 
 	/**
@@ -853,14 +902,7 @@ public class GameAnalytics {
 	}
 
 	private static void sendOffUserStats() {
-		// For developer
-		int memory = Math.round(Runtime.getRuntime().maxMemory() / 1000000);
-		newQualityEvent(MODEL_EVENT_NAME + android.os.Build.MODEL,
-				"Max memory = " + memory + " mb");
-		newQualityEvent(ANDROID_VERSION_EVENT_NAME
-				+ android.os.Build.VERSION.RELEASE, null);
-
-		// For GA
+		// Automatically log version numbers, model and unhashed android id.
 		newUserEvent(null, null, null, AREA, null, null, null, ANDROID,
 				android.os.Build.MODEL, ANDROID + " "
 						+ android.os.Build.VERSION.RELEASE.substring(0, 3),
@@ -904,6 +946,18 @@ public class GameAnalytics {
 		} else {
 			GALog.w("Warning: GameAnalytics has not been initialised. Call GameAnalytics.initialise(Context context, String secretKey, String gameKey) first");
 			return null;
+		}
+	}
+
+	/**
+	 * Manually clears the database, will result in loss of analytics data if
+	 * used in production.
+	 */
+	public static void clearDatabase() {
+		if (INITIALISED) {
+			EVENT_DATABASE.clear();
+		} else {
+			GALog.w("Warning: GameAnalytics has not been initialised. Call GameAnalytics.initialise(Context context, String secretKey, String gameKey) first");
 		}
 	}
 }

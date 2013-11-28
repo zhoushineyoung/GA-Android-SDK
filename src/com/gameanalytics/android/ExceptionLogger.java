@@ -33,17 +33,14 @@ public class ExceptionLogger implements UncaughtExceptionHandler {
 				.replaceAll("\t", " ");
 
 		// Find root cause
-		
 		Throwable cause = ex;
 		while (cause.getCause() != null) {
 			cause = cause.getCause();
 		}
 
 		// Log the error
-		// eventId = Exception:'ExceptionType' e.g. java.lang.Arithmetic
-		// message = Stack trace
-		GameAnalytics.newQualityEvent(
-				"Exception:" + cause.getClass().getName(), stackTrace);
+		GameAnalytics
+				.newErrorEvent(stackTrace, GameAnalytics.CRITICAL_SEVERITY);
 
 		// Pass to default exception handler once data has been sent.
 		GameAnalytics.DEFAULT_EXCEPTION_HANDLER.uncaughtException(thread, ex);
