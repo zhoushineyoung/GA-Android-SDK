@@ -85,10 +85,25 @@ public class GameAnalytics {
 	private static final String SDK_VERSION = "GA Android SDK 1.11";
 
 	// ERROR EVENT SEVERITY TYPES
+	/**
+	 * Used as the severity parameter for newErrorEvent(). Severity = "critical"
+	 */
 	public static final Severity CRITICAL_SEVERITY = new Severity("critical");
+	/**
+	 * Used as the severity parameter for newErrorEvent(). Severity = "error"
+	 */
 	public static final Severity ERROR_SEVERITY = new Severity("error");
+	/**
+	 * Used as the severity parameter for newErrorEvent(). Severity = "warning"
+	 */
 	public static final Severity WARNING_SEVERITY = new Severity("warning");
+	/**
+	 * Used as the severity parameter for newErrorEvent(). Severity = "info"
+	 */
 	public static final Severity INFO_SEVERITY = new Severity("info");
+	/**
+	 * Used as the severity parameter for newErrorEvent(). Severity = "debug"
+	 */
 	public static final Severity DEBUG_SEVERITY = new Severity("debug");
 
 	// OTHER
