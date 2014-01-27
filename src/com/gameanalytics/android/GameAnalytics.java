@@ -82,7 +82,7 @@ public class GameAnalytics {
 	private static final String FPS_EVENT_NAME = "GA:AverageFPS";
 	private static final String CRITICAL_FPS_EVENT_NAME = "GA:CriticalFPS";
 	private static final String ANDROID = "Android";
-	private static final String SDK_VERSION = "android 1.11";
+	private static final String SDK_VERSION = "android 1.12.0";
 
 	// ERROR EVENT SEVERITY TYPES
 	/**
