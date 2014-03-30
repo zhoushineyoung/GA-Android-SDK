@@ -281,10 +281,12 @@ public class EventDatabase {
 	synchronized private void insert(ContentValues values) {
 		if (MAXIMUM_EVENT_STORAGE == 0 || !isFull()) {
 			db.insert(TABLENAME, null, values);
+		} else{
+			GALog.i("Event not added to database, database is full.");
 		}
 	}
 
-	protected void deleteSentEvents(ArrayList<Integer> eventsToDelete,
+	synchronized protected void deleteSentEvents(ArrayList<Integer> eventsToDelete,
 			String category) {
 		GALog.i("Deleting " + eventsToDelete.size() + " " + category
 				+ " events");

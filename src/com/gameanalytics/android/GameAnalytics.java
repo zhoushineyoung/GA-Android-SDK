@@ -82,7 +82,7 @@ public class GameAnalytics {
 	private static final String FPS_EVENT_NAME = "GA:AverageFPS";
 	private static final String CRITICAL_FPS_EVENT_NAME = "GA:CriticalFPS";
 	private static final String ANDROID = "Android";
-	private static final String SDK_VERSION = "android 1.12.0";
+	private static final String SDK_VERSION = "android 1.13.0";
 
 	// ERROR EVENT SEVERITY TYPES
 	/**
@@ -171,7 +171,9 @@ public class GameAnalytics {
 		// Get user id
 		UNHASHED_ANDROID_ID = Secure.getString(context.getContentResolver(),
 				Secure.ANDROID_ID);
-		USER_ID = md5(UNHASHED_ANDROID_ID);
+		if (USER_ID==null){
+			USER_ID = md5(UNHASHED_ANDROID_ID);
+		}
 		// Set game and secret keys and build
 		SECRET_KEY = secretKey;
 		GAME_KEY = gameKey + "/";
@@ -250,7 +252,7 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new design event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setTimeInterval().
+	 * batched array after the time interval set using setSendEventsInterval().
 	 * 
 	 * @param eventId
 	 *            use colons to denote subtypes, e.g. 'PickedUpAmmo:Shotgun'
@@ -282,7 +284,7 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new design event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setTimeInterval(). The
+	 * batched array after the time interval set using setSendEventsInterval(). The
 	 * current activity will be used as the 'area' value for the event.
 	 * 
 	 * @param eventId
@@ -294,7 +296,7 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new design event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setTimeInterval(). The
+	 * batched array after the time interval set using setSendEventsInterval(). The
 	 * current activity will be used as the 'area' value for the event.
 	 * 
 	 * @param eventId
@@ -308,7 +310,7 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new quality event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setTimeInterval().
+	 * batched array after the time interval set using setSendEventsInterval().
 	 * 
 	 * @param eventId
 	 *            use colons to denote subtypes, e.g.
@@ -343,7 +345,7 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new quality event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setTimeInterval(). The
+	 * batched array after the time interval set using setSendEventsInterval(). The
 	 * current activity will be used as the 'area' value for the event.
 	 * 
 	 * @param eventId
@@ -359,7 +361,7 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new quality event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setTimeInterval(). The
+	 * batched array after the time interval set using setSendEventsInterval(). The
 	 * current activity will be used as the 'area' value for the event.
 	 * 
 	 * @param eventId
@@ -375,7 +377,7 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new error event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setTimeInterval().
+	 * batched array after the time interval set using setSendEventsInterval().
 	 * 
 	 * @param message
 	 *            message associated with the error e.g. the stack trace
@@ -412,7 +414,7 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new error event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setTimeInterval(). The
+	 * batched array after the time interval set using setSendEventsInterval(). The
 	 * current activity will be used as the 'area' value for the event.
 	 * 
 	 * @param message
@@ -471,7 +473,7 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new user event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setTimeInterval(). The
+	 * batched array after the time interval set using setSendEventsInterval(). The
 	 * current activity will be used as the 'area' value for the event.
 	 * 
 	 * @param eventId
@@ -493,7 +495,7 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new user event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setTimeInterval(). The
+	 * batched array after the time interval set using setSendEventsInterval(). The
 	 * current activity will be used as the 'area' value for the event.
 	 * 
 	 * @param eventId
@@ -571,7 +573,7 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new business event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setTimeInterval().
+	 * batched array after the time interval set using setSendEventsInterval().
 	 * 
 	 * @param eventId
 	 *            use colons to denote subtypes, e.g. 'PurchaseWeapon:Shotgun'
@@ -608,7 +610,7 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new business event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setTimeInterval(). The
+	 * batched array after the time interval set using setSendEventsInterval(). The
 	 * current activity will be used as the 'area' value for the event.
 	 * 
 	 * @param eventId
@@ -672,6 +674,7 @@ public class GameAnalytics {
 			// No, start logging
 			GALog.i("Start logging FPS.");
 			START_FPS_TIME = System.currentTimeMillis();
+			FPS_FRAMES = 0;
 		} else {
 			// Increment number of frames
 			FPS_FRAMES++;
@@ -719,7 +722,7 @@ public class GameAnalytics {
 					START_FPS_TIME = 0;
 				}
 			} else {
-				GALog.w("Warning: stopLoggingFPS() was called before startLoggingFPS().");
+				GALog.w("Warning: stopLoggingFPS() was called before logFPS().");
 			}
 		}
 	}
@@ -821,7 +824,7 @@ public class GameAnalytics {
 	 *            true = enabled; false = disabled
 	 */
 	public static void setAutoBatch(boolean value) {
-		AUTO_BATCH = false;
+		AUTO_BATCH = value;
 	}
 
 	/**
