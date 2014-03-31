@@ -1,7 +1,25 @@
-Android-Wrapper-Private
-=======================
+The GameAnalytics SDK for Android
+=================================
 
 This is the Android wrapper for GameAnalytics. It allows you to get analytics data from your Android game to your GameAnalytics account with the minimum of effort!
+
+**Changelog**
+
+##0.1.13
+
+- The deleteSendEvents() method is now synchronized to stop simultaneous database access
+- The custom user ID is no longer overwritten in the initialise() method
+- Log info to console when event database is full (verbose mode only)
+- Correct documentation setTimeInterval > setSendEventsInterval
+
+##0.1.12
+
+- Updated SDK version format
+
+##0.1.11
+
+- Added support for the error event category
+- Added the clearDatabase() method which allows the forced-cleaning of cached events locally
 
 **How it works - a brief description!**
 
@@ -32,7 +50,7 @@ There are two ways to get the wrapper into your application.
 
 **Step 3 - Basic setup**
 
-If you haven’t already, sign up for an account at www.gameanalytics.com. Make sure you write down your GAME KEY and SECRET KEY somewhere safe.
+If you havenï¿½t already, sign up for an account at www.gameanalytics.com. Make sure you write down your GAME KEY and SECRET KEY somewhere safe.
 
 Initialise the wrapper in the entry activity of your application's onCreate() method:
 
@@ -77,7 +95,7 @@ Finally, add the following two permissions to your AndroidManifest.xml (if you d
 
 ```
 
-That’s it! Your basic Game Analytics functionality is set up.
+Thatï¿½s it! Your basic Game Analytics functionality is set up.
 
 **Step 4 - Logging events**
 
@@ -104,7 +122,7 @@ The Android wrapper has a load of extra features to save you the work of coding 
 
     GameAnalytics.logUnhandledExceptions();
 
-You can view them by going to the Quality tab of the Game Analytics dashboard and clicking on the EventId called ‘Exceptions’. To view the stack traces, simply click on the individual names of each exception.
+You can view them by going to the Quality tab of the Game Analytics dashboard and clicking on the EventId called ï¿½Exceptionsï¿½. To view the stack traces, simply click on the individual names of each exception.
 
 **Log average FPS** - Add the following line of code to somewhere in your draw loop to automatically logFPS:
 
