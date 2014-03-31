@@ -5,23 +5,23 @@ This is the Android wrapper for GameAnalytics. It allows you to get analytics da
 
 **Changelog**
 
-##0.1.13
+**0.1.13**
 
 - The deleteSendEvents() method is now synchronized to stop simultaneous database access
 - The custom user ID is no longer overwritten in the initialise() method
 - Log info to console when event database is full (verbose mode only)
 - Correct documentation setTimeInterval > setSendEventsInterval
 
-##0.1.12
+**0.1.12**
 
 - Updated SDK version format
 
-##0.1.11
+**0.1.11**
 
 - Added support for the error event category
 - Added the clearDatabase() method which allows the forced-cleaning of cached events locally
 
-**How it works - a brief description!**
+##How it works - a brief description!
 
 Every time a new event is created, the details are stored in a local SQLite database. In addition, a 'BatchThread' is started if one does not already exist. The 'BatchThread' waits for a specific interval and checks whether an internet connection is available. If so, it takes all the event info collected so far, puts them into JSON arrays and sends them off to the Game Analytics server.
 
@@ -97,7 +97,7 @@ Finally, add the following two permissions to your AndroidManifest.xml (if you d
 
 That�s it! Your basic Game Analytics functionality is set up.
 
-**Step 4 - Logging events**
+## Logging custom events
 
 You can read all about how the event logging system works with Game Analytics [here](http://support.gameanalytics.com/entries/22645043-Event-categories).
 
@@ -114,7 +114,7 @@ GameAnalytics.newQualityEvent(eventId, message, area, x, y, z);
 
 Use colons within the eventId string to denote subtypes. The area, x, y and z parameters are optional. If the area parameter is omitted then it defualts to the class name of the current activity.
 
-**Step 5 - Extra features**
+## Extra features
 
 The Android wrapper has a load of extra features to save you the work of coding them yourself. Here's a summary:
 
@@ -170,7 +170,7 @@ This will post logs every time an event is created and batched off to the server
 
     GameAnalytics.setMaximumEventStorage(capacity);
 
-**Step 6 - Tips and tricks**
+## Tips and tricks
 
 **Parent Activity** - Use a parent class that extends Activity to remove the need to put startSession() and stopSession() in every activity's onPause and onResume() methods. The following example is taken from the demo application:
 
