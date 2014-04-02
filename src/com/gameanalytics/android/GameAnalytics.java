@@ -82,7 +82,7 @@ public class GameAnalytics {
 	private static final String FPS_EVENT_NAME = "GA:AverageFPS";
 	private static final String CRITICAL_FPS_EVENT_NAME = "GA:CriticalFPS";
 	private static final String ANDROID = "Android";
-	private static final String SDK_VERSION = "android 1.13.0";
+	private static final String SDK_VERSION = "android 1.13.1";
 
 	// ERROR EVENT SEVERITY TYPES
 	/**
@@ -922,9 +922,8 @@ public class GameAnalytics {
 	private static void sendOffUserStats() {
 		// Automatically log version numbers, model and unhashed android id.
 		newUserEvent(null, null, null, AREA, null, null, null, ANDROID,
-				android.os.Build.MODEL, ANDROID + " "
-						+ android.os.Build.VERSION.RELEASE.substring(0, 3),
-				ANDROID + " " + android.os.Build.VERSION.RELEASE, SDK_VERSION,
+				android.os.Build.MODEL, android.os.Build.VERSION.RELEASE.substring(0, 3),
+				android.os.Build.VERSION.RELEASE, SDK_VERSION,
 				null, null, null, null, null, null, UNHASHED_ANDROID_ID);
 	}
 

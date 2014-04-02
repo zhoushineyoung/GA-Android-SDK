@@ -5,18 +5,24 @@ This is the Android wrapper for GameAnalytics. It allows you to get analytics da
 
 **Changelog**
 
-**1.1.13**
+**1.13.1**
+
+- Changed format of os_major from "Android x.y" to "x.y"
+- Changed format of os_minor from "Android x.y.z" to "x.y.z"
+- Renamed all .jar files to consitent x.y.z. format for SDK version number
+
+**1.13.0**
 
 - The deleteSendEvents() method is now synchronized to stop simultaneous database access
 - The custom user ID is no longer overwritten in the initialise() method
 - Log info to console when event database is full (verbose mode only)
 - Correct documentation setTimeInterval > setSendEventsInterval
 
-**1.1.12**
+**1.12.0**
 
 - Updated SDK version format
 
-**1.1.11**
+**1.11.0**
 
 - Added support for the error event category
 - Added the clearDatabase() method which allows the forced-cleaning of cached events locally
