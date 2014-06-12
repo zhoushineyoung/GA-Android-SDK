@@ -47,6 +47,9 @@ public class UserEvent {
 	private String install_ad;
 	private String install_keyword;
 	private String android_id;
+	
+	// ADDED IN V1.14.1
+	private String google_aid;
 
 	public UserEvent(String user_id, String session_id, String build,
 			String area, Float x, Float y, Float z, Character gender,
@@ -54,7 +57,7 @@ public class UserEvent {
 			String os_major, String os_minor, String sdk_version,
 			String install_publisher, String install_site,
 			String install_campaign, String install_adgroup, String install_ad,
-			String install_keyword, String android_id) {
+			String install_keyword, String android_id, String google_aid) {
 		this.user_id = user_id;
 		this.session_id = session_id;
 		this.build = build;
@@ -79,5 +82,6 @@ public class UserEvent {
 		this.install_ad = install_ad;
 		this.install_keyword = install_keyword;
 		this.android_id = android_id;
+		this.google_aid = google_aid;
 	}
 }

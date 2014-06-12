@@ -67,7 +67,7 @@ public class EventDatabase {
 	protected final static String BIRTH_YEAR = "birth_year";
 	protected final static String FRIEND_COUNT = "friend_count";
 
-	// Optional user events added in V1.10
+	// Optional user fields added in V1.10
 	protected final static String PLATFORM = "platform";
 	protected final static String DEVICE = "device";
 	protected final static String OS_MAJOR = "os_major";
@@ -80,6 +80,9 @@ public class EventDatabase {
 	protected final static String INSTALL_AD = "install_ad";
 	protected final static String INSTALL_KEYWORD = "install_keyword";
 	protected final static String ANDROID_ID = "android_id";
+
+	// Additional android Google AID field added in V1.14
+	protected final static String GOOGLE_AID = "google_aid";
 
 	// Quality & Error
 	protected final static String MESSAGE = "message";
@@ -97,7 +100,8 @@ public class EventDatabase {
 			+ INSTALL_SITE + " text," + INSTALL_CAMPAIGN + " text,"
 			+ INSTALL_ADGROUP + " text," + INSTALL_AD + " text,"
 			+ INSTALL_KEYWORD + " text," + GAME_KEY + " text," + SECRET_KEY
-			+ " text," + ANDROID_ID + " text," + SEVERITY + " text" + ");";
+			+ " text," + ANDROID_ID + " text," + SEVERITY + " text,"
+			+ GOOGLE_AID + " text" + ");";
 
 	// Database operations (SYNCHRONIZED)
 	// The following methods are synchronized so that extra events won't be
@@ -105,8 +109,8 @@ public class EventDatabase {
 	// sent.
 	synchronized protected Object[] getEvents() {
 		// Get all events
-		Cursor cursor = db.query(TABLENAME, null, null, null, null, null,
-				ROW_ID);
+		Cursor cursor = db.query(TABLENAME, null, USER_ID + " is not null",
+				null, null, null, ROW_ID);
 
 		// Create Hashmaps of event arrays to support multiple game ids
 		HashMap<String, EventList<DesignEvent>> designEvents = new HashMap<String, EventList<DesignEvent>>();
@@ -148,6 +152,7 @@ public class EventDatabase {
 		String secretKey;
 		String androidId;
 		String severity;
+		String googleAID;
 
 		// Populate ArrayLists
 		if (cursor.moveToFirst()) {
@@ -238,13 +243,15 @@ public class EventDatabase {
 					installAd = cursor.getString(26);
 					installKeyword = cursor.getString(27);
 					androidId = cursor.getString(30);
+					googleAID = cursor.getString(32);
 					userEvents.get(gameKey).addEvent(
 							new UserEvent(userId, sessionId, build, area, x, y,
 									z, gender, birthYear, friendCount,
 									platform, device, osMajor, osMinor,
 									sdkVersion, installPublisher, installSite,
 									installCampaign, installAdgroup, installAd,
-									installKeyword, androidId), rowId);
+									installKeyword, androidId,
+									googleAID), rowId);
 				} else if (type.equals(GameAnalytics.QUALITY)) {
 					// Create new arraylist if first event with this game id
 					if (qualityEvents.get(gameKey) == null) {
@@ -281,13 +288,26 @@ public class EventDatabase {
 	synchronized private void insert(ContentValues values) {
 		if (MAXIMUM_EVENT_STORAGE == 0 || !isFull()) {
 			db.insert(TABLENAME, null, values);
-		} else{
+		} else {
 			GALog.i("Event not added to database, database is full.");
 		}
 	}
 
-	synchronized protected void deleteSentEvents(ArrayList<Integer> eventsToDelete,
-			String category) {
+	private boolean isFull() {
+		boolean isFull;
+		Cursor cursor = db.query(TABLENAME, new String[] { ROW_ID }, null,
+				null, null, null, null);
+		if (cursor.getCount() >= MAXIMUM_EVENT_STORAGE) {
+			isFull = true;
+		} else {
+			isFull = false;
+		}
+		cursor.close();
+		return isFull;
+	}
+
+	synchronized protected void deleteSentEvents(
+			ArrayList<Integer> eventsToDelete, String category) {
 		GALog.i("Deleting " + eventsToDelete.size() + " " + category
 				+ " events");
 		String idList = "(";
@@ -301,6 +321,28 @@ public class EventDatabase {
 
 		db.delete(TABLENAME, "_id IN " + idList, null);
 	}
+
+	synchronized protected void deleteEventsWithoutUserId() {
+		GALog.i("Deleting events without user id, respecting user preference to disabled tracking.");
+		db.delete(TABLENAME, USER_ID + " is null", null);
+	}
+
+	synchronized protected void clear() {
+		db.delete(TABLENAME, null, null);
+	}
+
+	// This method is and should only called from background thread from
+	// GetGoogleAIDAsync.
+	synchronized protected void populateEventsWithNoUserId(String userId,
+			String googleAID) {
+		ContentValues values = new ContentValues();
+		values.put(USER_ID, userId);
+		values.put(GOOGLE_AID, googleAID);
+		int updated = db.update(TABLENAME, values, USER_ID + " is null", null);
+		GALog.i(updated + " events populated with new user_id.");
+	}
+
+	// END OF SYNCHRONISED EVENTS
 
 	protected void addDesignEvent(String gameKey, String secretKey,
 			String userId, String sessionId, String build, String eventId,
@@ -377,7 +419,7 @@ public class EventDatabase {
 			String osMajor, String osMinor, String sdkVersion,
 			String installPublisher, String installSite,
 			String installCampaign, String installAdgroup, String installAd,
-			String installKeyword, String androidId) {
+			String installKeyword, String androidId, String googleAID) {
 		final ContentValues values = new ContentValues();
 		values.put(GAME_KEY, gameKey);
 		values.put(SECRET_KEY, secretKey);
@@ -418,6 +460,7 @@ public class EventDatabase {
 		values.put(INSTALL_AD, installAd);
 		values.put(INSTALL_KEYWORD, installKeyword);
 		values.put(ANDROID_ID, androidId);
+		values.put(GOOGLE_AID, googleAID);
 		// Do insert on seperate thread so that if synchronization locks up the
 		// method, main thread can return.
 		new Thread() {
@@ -491,22 +534,8 @@ public class EventDatabase {
 		}.start();
 	}
 
-	private boolean isFull() {
-		Cursor cursor = db.query(TABLENAME, new String[] { ROW_ID }, null,
-				null, null, null, null);
-		if (cursor.getCount() >= MAXIMUM_EVENT_STORAGE) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
 	protected void setMaximumEventStorage(int maximumEventStorage) {
 		MAXIMUM_EVENT_STORAGE = maximumEventStorage;
-	}
-
-	protected void clear() {
-		db.delete(TABLENAME, null, null);
 	}
 
 	// OPENHELPER CLASS
@@ -514,7 +543,7 @@ public class EventDatabase {
 
 		// Database details
 		private final static String DB_NAME = "GameAnalytics";
-		private final static int DB_VERSION = 3;
+		private final static int DB_VERSION = 4;
 
 		public OpenHelper(Context context) {
 			super(context, DB_NAME, null, DB_VERSION);
@@ -526,6 +555,11 @@ public class EventDatabase {
 			// Create tables:
 			GALog.i("Creating database to store events.");
 			db.execSQL(CREATE_TABLE);
+
+			// From version 1.14.0 onwards, we use Google AID if available.
+			// Set preference when creating table to avoid changing user IDs of
+			// existing users.
+			GameAnalytics.setUseGoogleAIDIfAvailable();
 		}
 
 		@Override
@@ -554,6 +588,9 @@ public class EventDatabase {
 				}
 				if (oldVersion <= 2) {
 					db.execSQL(addColumn + SEVERITY + text);
+				}
+				if (oldVersion <= 3) {
+					db.execSQL(addColumn + GOOGLE_AID + text);
 				}
 			}
 		}

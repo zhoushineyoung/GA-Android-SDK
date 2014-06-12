@@ -5,6 +5,12 @@ This is the Android wrapper for GameAnalytics. It allows you to get analytics da
 
 **Changelog**
 
+**1.14.0**
+- Added support for [Android Advertising ID](https://developer.android.com/google/play-services/id.html)
+- Existing users will still be tracked with existing ID
+- Users are now able to opt-out of analytics altogether on 4.4 Kitkat and above
+- Including the Google Play Services library is compulsory from v1.14.0, see additional setup step below for tips.
+
 **1.13.1**
 
 - Changed format of os_major from "Android x.y" to "x.y"
@@ -40,7 +46,7 @@ You can get a copy of the GameAnalytics Android wrapper by either:
 - Forking/cloning using Git (all you GitHub afficianados will already know how to do this!)
 - Downloading directly as a .zip file using the button near the top of the screen
 
-**Step 2 - Using it in your application**
+**Step 2 - Importing into your project**
 
 There are two ways to get the wrapper into your application.
 
@@ -50,13 +56,27 @@ There are two ways to get the wrapper into your application.
 	* Right click on your application that you want to use Game Analytics with and click Properties -> Android -> Under libraries click 'add' and select the Game-Analytics-Wrapper project.
 
 2. Using JARs:
-	* Copy the game-analytics-wrapper-vX.X.jar from the releases folder into the lib folder of your Android project.
+	* Copy the game-analytics-wrapper-vX.X.X.jar from the releases folder into the lib folder of your Android project.
 	* Copy the gson-X.X.X.jar from the libs folder into the lib folder of your Android project
 	* *Note: the jar may not be as up-to-date as the code on GitHub. Also you will not have access to the javadoc markup by going this route, whereas if you use the library project you will.*
 
-**Step 3 - Basic setup**
+**Step 3 - Google Play Services**	
+	* From v1.14.0 onwards, the Google Play Services library needs to be included in your project. This is to allow Game Analytics to track the official Android Advertising ID. But don't worry, your game will still be playable on devices without Google Play Services so your users will not be inconvenienced.
+	* To include Google Play Services follow the instructions [here](http://developer.android.com/google/play-services/setup.html).
+	* If you are using method 1. Using a library project, you will need to include the Google Play Services library as a library project for the Game Analytics libary project. I.E. Your application will import the Game Analytics Library and then the Game Analytics Library will import the Google Play Game Services libary.
+	* If you are using method 2. Using JARs, then you will need include the Google Play Services Library directly in your own application project, in addition to the game-analytics-wrapper-vX.X.X.jar and gson-X.X.X.jar files.
+	* Finally, you need to include the following tag in your Android Manifest.xml between the <Application> and </Application> tags:
+	
+```java
+<!-- FOR GOOGLE PLAY SERVICES AND GAME ANALYTICS -->
+ <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
+```
+	
+**Step 4 - Basic setup**
 
-If you haven�t already, sign up for an account at www.gameanalytics.com. Make sure you write down your GAME KEY and SECRET KEY somewhere safe.
+If you haven't already, sign up for an account at www.gameanalytics.com. Make sure you write down your GAME KEY and SECRET KEY somewhere safe.
 
 Initialise the wrapper in the entry activity of your application's onCreate() method:
 

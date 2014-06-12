@@ -26,6 +26,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.provider.Settings.Secure;
 import android.text.format.Time;
@@ -67,6 +68,7 @@ public class GameAnalytics {
 	// APP/DEVELOPER SPECIFIC
 	private static String GAME_KEY;
 	private static String SECRET_KEY;
+	private static String GOOGLE_AID;
 	private static String USER_ID;
 	private static String UNHASHED_ANDROID_ID;
 	private static String SESSION_ID;
@@ -82,7 +84,11 @@ public class GameAnalytics {
 	private static final String FPS_EVENT_NAME = "GA:AverageFPS";
 	private static final String CRITICAL_FPS_EVENT_NAME = "GA:CriticalFPS";
 	private static final String ANDROID = "Android";
-	private static final String SDK_VERSION = "android 1.13.1";
+	private static final String SDK_VERSION = "android 1.14.0";
+
+	// HASHMAP AND KEYS
+	private static final String GAME_ANALYTICS_HASHSTORE = "game_analytics_hashstore";
+	private static final String USE_GOOGLE_AID = "use_google_aid";
 
 	// ERROR EVENT SEVERITY TYPES
 	/**
@@ -122,6 +128,7 @@ public class GameAnalytics {
 	private static int FPS_FRAMES;
 	private static ArrayList<PostResponseHandler> FINISHED_SENDING_EVENTS = new ArrayList<PostResponseHandler>();
 	private static boolean CAN_START_NEW_THREAD = true;
+	private static boolean DISABLED = false;
 
 	/**
 	 * Initialise the GameAnalytics wrapper. It is recommended that you call
@@ -168,12 +175,13 @@ public class GameAnalytics {
 	 */
 	public static void initialise(Context context, String secretKey,
 			String gameKey, String build) {
+		// Get reference to first context
+		CONTEXT = context;
+
 		// Get user id
 		UNHASHED_ANDROID_ID = Secure.getString(context.getContentResolver(),
 				Secure.ANDROID_ID);
-		if (USER_ID==null){
-			USER_ID = md5(UNHASHED_ANDROID_ID);
-		}
+
 		// Set game and secret keys and build
 		SECRET_KEY = secretKey;
 		GAME_KEY = gameKey + "/";
@@ -181,14 +189,46 @@ public class GameAnalytics {
 
 		// Initialise other variables
 		CLIENT = new AsyncHttpClient();
-		EVENT_DATABASE = new EventDatabase(context);
+		EVENT_DATABASE = new EventDatabase(CONTEXT);
 		DEFAULT_EXCEPTION_HANDLER = Thread.currentThread()
 				.getUncaughtExceptionHandler();
 		EXCEPTION_LOGGER = new ExceptionLogger();
 
+		// Google AID
+		GetGoogleAIDAsync getGAIDAsync = new GetGoogleAIDAsync(CONTEXT);
+		getGAIDAsync.execute();
+
 		// Set boolean initialised, newEvent() can only be called after
 		// initialise() and startSession()
+		DISABLED = false;
 		INITIALISED = true;
+	}
+
+	// Called under the following circumstances:
+	// 1. If user first used app prior to version 1.14.0 the database will be
+	// detected and the UUID will continue to be used.
+	// 2. If the Google AID is unavailable.
+	// 3. If the user opts out of tracking
+	protected static void setUserIdToUUID() {
+		// Respect custom user_id
+		if (USER_ID != null) {
+			setUserId(md5(UNHASHED_ANDROID_ID));
+		}
+
+		// Populate user ids of any events created before user id finalised
+		populateEventsWithNoUserId();
+	}
+
+	private static void populateEventsWithNoUserId() {
+		// This functionality is here because getting the Google AID
+		// is an asynchronous process. Therefore any events created directly
+		// after calling initialise() will have user_id = "null". This code will
+		// fill them in with the new id.
+		if (USER_ID != null) {
+			EVENT_DATABASE.populateEventsWithNoUserId(USER_ID, GOOGLE_AID);
+		} else {
+			GALog.w("Warning: trying to fill in events with no user id but user id is still null.");
+		}
 	}
 
 	/**
@@ -284,8 +324,8 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new design event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setSendEventsInterval(). The
-	 * current activity will be used as the 'area' value for the event.
+	 * batched array after the time interval set using setSendEventsInterval().
+	 * The current activity will be used as the 'area' value for the event.
 	 * 
 	 * @param eventId
 	 *            use colons to denote subtypes, e.g. 'PickedUpAmmo:Shotgun'
@@ -296,8 +336,8 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new design event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setSendEventsInterval(). The
-	 * current activity will be used as the 'area' value for the event.
+	 * batched array after the time interval set using setSendEventsInterval().
+	 * The current activity will be used as the 'area' value for the event.
 	 * 
 	 * @param eventId
 	 *            use colons to denote subtypes, e.g. 'PickedUpAmmo:Shotgun'
@@ -345,8 +385,8 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new quality event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setSendEventsInterval(). The
-	 * current activity will be used as the 'area' value for the event.
+	 * batched array after the time interval set using setSendEventsInterval().
+	 * The current activity will be used as the 'area' value for the event.
 	 * 
 	 * @param eventId
 	 *            use colons to denote subtypes, e.g.
@@ -361,8 +401,8 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new quality event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setSendEventsInterval(). The
-	 * current activity will be used as the 'area' value for the event.
+	 * batched array after the time interval set using setSendEventsInterval().
+	 * The current activity will be used as the 'area' value for the event.
 	 * 
 	 * @param eventId
 	 *            use colons to denote subtypes, e.g.
@@ -414,8 +454,8 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new error event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setSendEventsInterval(). The
-	 * current activity will be used as the 'area' value for the event.
+	 * batched array after the time interval set using setSendEventsInterval().
+	 * The current activity will be used as the 'area' value for the event.
 	 * 
 	 * @param message
 	 *            message associated with the error e.g. the stack trace
@@ -438,16 +478,19 @@ public class GameAnalytics {
 			String platform, String device, String osMajor, String osMinor,
 			String sdkVersion, String installPublisher, String installSite,
 			String installCampaign, String installAdgroup, String installAd,
-			String installKeyword, String androidId) {
+			String installKeyword, String androidId, String googleAID) {
 		if (ready()) {
-			GALog.i("New user event: gender: " + gender + ", birthYear: "
-					+ birthYear + ", friendCount: " + friendCount + ", area: "
-					+ area + ", pos: (" + x + ", " + y + ", " + z + ", "
-					+ platform + ", " + device + ", " + osMajor + ", "
-					+ osMinor + ", " + sdkVersion + ", " + installPublisher
-					+ ", " + installSite + ", " + installCampaign + ", "
-					+ installAdgroup + ", " + installAd + ", " + installKeyword
-					+ ", " + androidId + ")");
+			GALog.i("New user event: gender: " + gender + ", birth_year: "
+					+ birthYear + ", friend_count: " + friendCount + ", area: "
+					+ area + ", pos: (" + x + ", " + y + ", " + z + "), "
+					+ platform + ", device: " + device + ", os_major: "
+					+ osMajor + ", os_minor: " + osMinor + ", sdk_version :"
+					+ sdkVersion + ", install_publisher: " + installPublisher
+					+ ", install_site: " + installSite + ", install_campaign: "
+					+ installCampaign + ", install_adgroup: " + installAdgroup
+					+ ", install_ad: " + installAd + ", install_keyword: "
+					+ installKeyword + ", android_id: " + androidId
+					+ ", google_aid: " + googleAID + ")");
 			// Ensure we have a BatchThread ready to receive events
 			startThreadIfReq();
 
@@ -456,7 +499,8 @@ public class GameAnalytics {
 					SESSION_ID, BUILD, area, x, y, z, gender, birthYear,
 					friendCount, platform, device, osMajor, osMinor,
 					sdkVersion, installPublisher, installSite, installCampaign,
-					installAdgroup, installAd, installKeyword, androidId);
+					installAdgroup, installAd, installKeyword, androidId,
+					googleAID);
 		}
 	}
 
@@ -473,8 +517,8 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new user event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setSendEventsInterval(). The
-	 * current activity will be used as the 'area' value for the event.
+	 * batched array after the time interval set using setSendEventsInterval().
+	 * The current activity will be used as the 'area' value for the event.
 	 * 
 	 * @param eventId
 	 *            use colons to denote subtypes
@@ -495,8 +539,8 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new user event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setSendEventsInterval(). The
-	 * current activity will be used as the 'area' value for the event.
+	 * batched array after the time interval set using setSendEventsInterval().
+	 * The current activity will be used as the 'area' value for the event.
 	 * 
 	 * @param eventId
 	 *            use colons to denote subtypes
@@ -521,8 +565,8 @@ public class GameAnalytics {
 			Integer birthYear, Integer friendCount, String area, Float x,
 			Float y, Float z) {
 		newUserEvent(gender, birthYear, friendCount, area, x, y, z, null, null,
-				null, null, null, null, null, null, null, null, null,
-				UNHASHED_ANDROID_ID);
+				null, null, null, null, null, null, null, null, null, null,
+				null);
 	}
 
 	/**
@@ -540,7 +584,7 @@ public class GameAnalytics {
 			Integer friendCount) {
 		newUserEvent(gender, birthYear, friendCount, AREA, null, null, null,
 				null, null, null, null, null, null, null, null, null, null,
-				null, UNHASHED_ANDROID_ID);
+				null, null, null);
 	}
 
 	/**
@@ -568,7 +612,7 @@ public class GameAnalytics {
 		newUserEvent(null, null, null, AREA, null, null, null, null, null,
 				null, null, null, installPublisher, installSite,
 				installCampaign, installAdgroup, installAd, installKeyword,
-				UNHASHED_ANDROID_ID);
+				null, null);
 	}
 
 	/**
@@ -610,8 +654,8 @@ public class GameAnalytics {
 
 	/**
 	 * Add a new business event to the event stack. This will be sent off in a
-	 * batched array after the time interval set using setSendEventsInterval(). The
-	 * current activity will be used as the 'area' value for the event.
+	 * batched array after the time interval set using setSendEventsInterval().
+	 * The current activity will be used as the 'area' value for the event.
 	 * 
 	 * @param eventId
 	 *            use colons to denote subtypes, e.g. 'PurchaseWeapon:Shotgun'
@@ -862,7 +906,11 @@ public class GameAnalytics {
 	private static boolean ready() {
 		if (INITIALISED) {
 			if (SESSION_STARTED) {
-				return true;
+				if (!DISABLED) {
+					return true;
+				} else {
+					GALog.i("Analytics have been disable due to user preferences.");
+				}
 			} else {
 				GALog.w("Warning: GameAnalytics session has not started. 1. Have you called GameAnalytics.startSession(Context context) in onResume()? OR 2. Are you trying to send events prior to onResume() being called, for example in onCreate()? You need to call startSession() before sending your first event.");
 			}
@@ -922,9 +970,10 @@ public class GameAnalytics {
 	private static void sendOffUserStats() {
 		// Automatically log version numbers, model and unhashed android id.
 		newUserEvent(null, null, null, AREA, null, null, null, ANDROID,
-				android.os.Build.MODEL, android.os.Build.VERSION.RELEASE.substring(0, 3),
-				android.os.Build.VERSION.RELEASE, SDK_VERSION,
-				null, null, null, null, null, null, UNHASHED_ANDROID_ID);
+				android.os.Build.MODEL,
+				android.os.Build.VERSION.RELEASE.substring(0, 3),
+				android.os.Build.VERSION.RELEASE, SDK_VERSION, null, null,
+				null, null, null, null, UNHASHED_ANDROID_ID, GOOGLE_AID);
 	}
 
 	protected static void sendingEvents(PostResponseHandler handler) {
@@ -968,7 +1017,7 @@ public class GameAnalytics {
 
 	/**
 	 * Manually clears the database, will result in loss of analytics data if
-	 * used in production.
+	 * used in production. This call will block until the database is cleared.
 	 */
 	public static void clearDatabase() {
 		if (INITIALISED) {
@@ -976,5 +1025,46 @@ public class GameAnalytics {
 		} else {
 			GALog.w("Warning: GameAnalytics has not been initialised. Call GameAnalytics.initialise(Context context, String secretKey, String gameKey) first");
 		}
+	}
+
+	protected static void setGoogleAID(String id) {
+		GOOGLE_AID = id;
+
+		if (isUseGoogleAIDIfAvailable()) {
+			// Use as main user id but respect custom, developer specified
+			// user_id
+			if (USER_ID != null) {
+				setUserId(id);
+			}
+			populateEventsWithNoUserId();
+		} else {
+			// Existing user, only use in google_aid field
+			GALog.i("...but continue to use UUID because this is an existing user.");
+			setUserIdToUUID();
+		}
+	}
+
+	protected static void setUseGoogleAIDIfAvailable() {
+		SharedPreferences hash = CONTEXT.getSharedPreferences(
+				GAME_ANALYTICS_HASHSTORE, Context.MODE_PRIVATE);
+		SharedPreferences.Editor editor = hash.edit();
+		editor.putBoolean(USE_GOOGLE_AID, true);
+		editor.commit();
+	}
+
+	private static boolean isUseGoogleAIDIfAvailable() {
+		SharedPreferences hash = CONTEXT.getSharedPreferences(
+				GAME_ANALYTICS_HASHSTORE, Context.MODE_PRIVATE);
+		return hash.getBoolean(USE_GOOGLE_AID, false);
+	}
+
+	protected static void disableAnalytics() {
+		// Currently only called if "LimitAdTracking" is enabled
+		// Completely disable analytics
+		DISABLED = true;
+	}
+
+	protected static boolean isDisabled() {
+		return DISABLED;
 	}
 }

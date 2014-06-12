@@ -130,6 +130,18 @@ public class BatchThread extends Thread {
 
 	@SuppressWarnings("unchecked")
 	private void sendEvents() {
+		// Final check to make sure analytics has not been disabled
+		if (GameAnalytics.isDisabled()) {
+			// Analytics has been disabled by user, we need to go into database
+			// and delete any events that were created before this preference was
+			// detected (ie those without user ids)
+			eventDatabase.deleteEventsWithoutUserId();
+
+			// Make it clear for new thread despite the disable
+			GameAnalytics.canStartNewThread();
+			return;
+		}
+
 		// Get events from database
 		Object[] eventLists = eventDatabase.getEvents();
 		HashMap<String, EventList<DesignEvent>> designEvents = (HashMap<String, EventList<DesignEvent>>) eventLists[0];
