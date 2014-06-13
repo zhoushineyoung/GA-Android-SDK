@@ -29,10 +29,20 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 public class EventDatabase {
 
+	private OpenHelper dbHelper;
 	private SQLiteDatabase db;
 
-	public EventDatabase(Context context) {
-		this.db = new OpenHelper(context).getWritableDatabase();
+	protected EventDatabase(Context context) {
+		dbHelper = new OpenHelper(context);
+		open();
+	}
+
+	protected void open() {
+		this.db = dbHelper.getWritableDatabase();
+	}
+
+	protected void close() {
+		dbHelper.close();
 	}
 
 	// Other values
@@ -250,8 +260,8 @@ public class EventDatabase {
 									platform, device, osMajor, osMinor,
 									sdkVersion, installPublisher, installSite,
 									installCampaign, installAdgroup, installAd,
-									installKeyword, androidId,
-									googleAID), rowId);
+									installKeyword, androidId, googleAID),
+							rowId);
 				} else if (type.equals(GameAnalytics.QUALITY)) {
 					// Create new arraylist if first event with this game id
 					if (qualityEvents.get(gameKey) == null) {

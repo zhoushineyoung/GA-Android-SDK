@@ -84,7 +84,7 @@ public class GameAnalytics {
 	private static final String FPS_EVENT_NAME = "GA:AverageFPS";
 	private static final String CRITICAL_FPS_EVENT_NAME = "GA:CriticalFPS";
 	private static final String ANDROID = "Android";
-	private static final String SDK_VERSION = "android 1.14.0";
+	private static final String SDK_VERSION = "android 1.14.1";
 
 	// HASHMAP AND KEYS
 	private static final String GAME_ANALYTICS_HASHSTORE = "game_analytics_hashstore";
@@ -175,6 +175,10 @@ public class GameAnalytics {
 	 */
 	public static void initialise(Context context, String secretKey,
 			String gameKey, String build) {
+		if (INITIALISED){
+			GALog.w("Game Analytics already initialised.");
+			return;
+		}
 		// Get reference to first context
 		CONTEXT = context;
 
@@ -211,7 +215,7 @@ public class GameAnalytics {
 	// 3. If the user opts out of tracking
 	protected static void setUserIdToUUID() {
 		// Respect custom user_id
-		if (USER_ID != null) {
+		if (USER_ID == null) {
 			setUserId(md5(UNHASHED_ANDROID_ID));
 		}
 
@@ -265,6 +269,9 @@ public class GameAnalytics {
 		long nowTime = System.currentTimeMillis();
 
 		SESSION_STARTED = true;
+		
+		// Opend database
+		EVENT_DATABASE.open();
 
 		// Need to get a new sessionId?
 		if (SESSION_ID == null
@@ -288,6 +295,8 @@ public class GameAnalytics {
 		SESSION_END_TIME = System.currentTimeMillis() + SESSION_TIME_OUT;
 		SESSION_STARTED = false;
 		CONTEXT = null;
+		// Close database
+		EVENT_DATABASE.close();
 	}
 
 	/**
@@ -1033,7 +1042,7 @@ public class GameAnalytics {
 		if (isUseGoogleAIDIfAvailable()) {
 			// Use as main user id but respect custom, developer specified
 			// user_id
-			if (USER_ID != null) {
+			if (USER_ID == null) {
 				setUserId(id);
 			}
 			populateEventsWithNoUserId();

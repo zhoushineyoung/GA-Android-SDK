@@ -5,6 +5,10 @@ This is the Android wrapper for GameAnalytics. It allows you to get analytics da
 
 **Changelog**
 
+**1.14.1**
+- Fixed bug causing SQLiteDatabaseLockedException
+- Fixed bug causing following error: "Warning: trying to fill in events with no user id but user id is still null."
+
 **1.14.0**
 - Added support for [Android Advertising ID](https://developer.android.com/google/play-services/id.html)
 - Existing users will still be tracked with existing ID
