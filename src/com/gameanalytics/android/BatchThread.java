@@ -57,17 +57,15 @@ public class BatchThread extends Thread {
 	private int networkPollInterval;
 	private Context context;
 	private AsyncHttpClient client;
-	private EventDatabase eventDatabase;
 	private boolean cacheLocally;
 	private boolean pollNetwork = true;
 
 	protected BatchThread(Context context, AsyncHttpClient client,
-			EventDatabase eventDatabase, String gameKey, String secretKey,
+			String gameKey, String secretKey,
 			int sendEventInterval, int networkPollInterval, boolean cacheLocally) {
 		super();
 		this.context = context;
 		this.client = client;
-		this.eventDatabase = eventDatabase;
 		this.defaultGameKey = gameKey;
 		this.defaultSecretKey = secretKey;
 		this.sendEventInterval = sendEventInterval;
@@ -99,7 +97,7 @@ public class BatchThread extends Thread {
 		if (!cacheLocally && !isNetworkConnected()) {
 			// Wipe database
 			GALog.i("No network available and cache locally is disabled, clearing events");
-			eventDatabase.clear();
+			EventDatabase.clear(context);
 			// Don't bother polling network
 			GameAnalytics.canStartNewThread();
 			return;
@@ -135,7 +133,7 @@ public class BatchThread extends Thread {
 			// Analytics has been disabled by user, we need to go into database
 			// and delete any events that were created before this preference was
 			// detected (ie those without user ids)
-			eventDatabase.deleteEventsWithoutUserId();
+			EventDatabase.deleteEventsWithoutUserId(context);
 
 			// Make it clear for new thread despite the disable
 			GameAnalytics.canStartNewThread();
@@ -143,7 +141,7 @@ public class BatchThread extends Thread {
 		}
 
 		// Get events from database
-		Object[] eventLists = eventDatabase.getEvents();
+		Object[] eventLists = EventDatabase.getEvents(context);
 		HashMap<String, EventList<DesignEvent>> designEvents = (HashMap<String, EventList<DesignEvent>>) eventLists[0];
 		HashMap<String, EventList<BusinessEvent>> businessEvents = (HashMap<String, EventList<BusinessEvent>>) eventLists[1];
 		HashMap<String, EventList<UserEvent>> userEvents = (HashMap<String, EventList<UserEvent>>) eventLists[2];
@@ -257,7 +255,7 @@ public class BatchThread extends Thread {
 
 		// Create handler
 		PostResponseHandler handler = new PostResponseHandler(eventsToDelete,
-				eventDatabase, category);
+				category, context);
 
 		// Send event
 		client.post(context, GameAnalytics.API_URL + eventGameKey + category,

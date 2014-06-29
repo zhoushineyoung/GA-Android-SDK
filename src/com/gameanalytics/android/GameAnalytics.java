@@ -115,7 +115,6 @@ public class GameAnalytics {
 	// OTHER
 	private static AsyncHttpClient CLIENT;
 	private static BatchThread CURRENT_THREAD;
-	private static EventDatabase EVENT_DATABASE;
 	protected static UncaughtExceptionHandler DEFAULT_EXCEPTION_HANDLER;
 	private static ExceptionLogger EXCEPTION_LOGGER;
 	private static Context CONTEXT;
@@ -175,7 +174,7 @@ public class GameAnalytics {
 	 */
 	public static void initialise(Context context, String secretKey,
 			String gameKey, String build) {
-		if (INITIALISED){
+		if (INITIALISED) {
 			GALog.w("Game Analytics already initialised.");
 			return;
 		}
@@ -193,7 +192,6 @@ public class GameAnalytics {
 
 		// Initialise other variables
 		CLIENT = new AsyncHttpClient();
-		EVENT_DATABASE = new EventDatabase(CONTEXT);
 		DEFAULT_EXCEPTION_HANDLER = Thread.currentThread()
 				.getUncaughtExceptionHandler();
 		EXCEPTION_LOGGER = new ExceptionLogger();
@@ -228,8 +226,9 @@ public class GameAnalytics {
 		// is an asynchronous process. Therefore any events created directly
 		// after calling initialise() will have user_id = "null". This code will
 		// fill them in with the new id.
-		if (USER_ID != null) {
-			EVENT_DATABASE.populateEventsWithNoUserId(USER_ID, GOOGLE_AID);
+		if (USER_ID != null && ready()) {
+			EventDatabase.populateEventsWithNoUserId(USER_ID, GOOGLE_AID,
+					CONTEXT);
 		} else {
 			GALog.w("Warning: trying to fill in events with no user id but user id is still null.");
 		}
@@ -269,9 +268,6 @@ public class GameAnalytics {
 		long nowTime = System.currentTimeMillis();
 
 		SESSION_STARTED = true;
-		
-		// Opend database
-		EVENT_DATABASE.open();
 
 		// Need to get a new sessionId?
 		if (SESSION_ID == null
@@ -295,8 +291,6 @@ public class GameAnalytics {
 		SESSION_END_TIME = System.currentTimeMillis() + SESSION_TIME_OUT;
 		SESSION_STARTED = false;
 		CONTEXT = null;
-		// Close database
-		EVENT_DATABASE.close();
 	}
 
 	/**
@@ -326,8 +320,8 @@ public class GameAnalytics {
 			startThreadIfReq();
 
 			// Add design event to batch stack
-			EVENT_DATABASE.addDesignEvent(GAME_KEY, SECRET_KEY, USER_ID,
-					SESSION_ID, BUILD, eventId, area, x, y, z, value);
+			EventDatabase.addDesignEvent(GAME_KEY, SECRET_KEY, USER_ID,
+					SESSION_ID, BUILD, eventId, area, x, y, z, value, CONTEXT);
 		}
 	}
 
@@ -387,8 +381,9 @@ public class GameAnalytics {
 			startThreadIfReq();
 
 			// Add quality event to batch stack
-			EVENT_DATABASE.addQualityEvent(GAME_KEY, SECRET_KEY, USER_ID,
-					SESSION_ID, BUILD, eventId, area, x, y, z, message);
+			EventDatabase
+					.addQualityEvent(GAME_KEY, SECRET_KEY, USER_ID, SESSION_ID,
+							BUILD, eventId, area, x, y, z, message, CONTEXT);
 		}
 	}
 
@@ -454,9 +449,9 @@ public class GameAnalytics {
 				startThreadIfReq();
 
 				// Add quality event to batch stack
-				EVENT_DATABASE.addErrorEvent(GAME_KEY, SECRET_KEY, USER_ID,
+				EventDatabase.addErrorEvent(GAME_KEY, SECRET_KEY, USER_ID,
 						SESSION_ID, BUILD, area, x, y, z, message,
-						severity.toString());
+						severity.toString(), CONTEXT);
 			}
 		}
 	}
@@ -504,12 +499,12 @@ public class GameAnalytics {
 			startThreadIfReq();
 
 			// Add user event to batch stack
-			EVENT_DATABASE.addUserEvent(GAME_KEY, SECRET_KEY, USER_ID,
+			EventDatabase.addUserEvent(GAME_KEY, SECRET_KEY, USER_ID,
 					SESSION_ID, BUILD, area, x, y, z, gender, birthYear,
 					friendCount, platform, device, osMajor, osMinor,
 					sdkVersion, installPublisher, installSite, installCampaign,
 					installAdgroup, installAd, installKeyword, androidId,
-					googleAID);
+					googleAID, CONTEXT);
 		}
 	}
 
@@ -653,10 +648,9 @@ public class GameAnalytics {
 			startThreadIfReq();
 
 			// Add business event to batch stack
-			EVENT_DATABASE
-					.addBusinessEvent(GAME_KEY, SECRET_KEY, USER_ID,
-							SESSION_ID, BUILD, eventId, area, x, y, z,
-							currency, amount);
+			EventDatabase.addBusinessEvent(GAME_KEY, SECRET_KEY, USER_ID,
+					SESSION_ID, BUILD, eventId, area, x, y, z, currency,
+					amount, CONTEXT);
 
 		}
 	}
@@ -888,7 +882,7 @@ public class GameAnalytics {
 	 *            maximum number of events that can be stored
 	 */
 	public static void setMaximumEventStorage(int max) {
-		EVENT_DATABASE.setMaximumEventStorage(max);
+		EventDatabase.setMaximumEventStorage(max);
 	}
 
 	/**
@@ -901,9 +895,8 @@ public class GameAnalytics {
 			if (CAN_START_NEW_THREAD) {
 				GALog.i("Starting manual batch.");
 				BatchThread sendEventThread = new BatchThread(CONTEXT, CLIENT,
-						EVENT_DATABASE, GAME_KEY, SECRET_KEY,
-						SEND_EVENT_INTERVAL, NETWORK_POLL_INTERVAL,
-						CACHE_LOCALLY);
+						GAME_KEY, SECRET_KEY, SEND_EVENT_INTERVAL,
+						NETWORK_POLL_INTERVAL, CACHE_LOCALLY);
 				CAN_START_NEW_THREAD = false;
 				sendEventThread.manualBatch();
 			} else {
@@ -914,7 +907,7 @@ public class GameAnalytics {
 
 	private static boolean ready() {
 		if (INITIALISED) {
-			if (SESSION_STARTED) {
+			if (SESSION_STARTED && CONTEXT != null) {
 				if (!DISABLED) {
 					return true;
 				} else {
@@ -968,9 +961,9 @@ public class GameAnalytics {
 		// Only start new thread IF (current thread is null OR current thread
 		// has finished) AND auto-batch is switched on.
 		if ((CURRENT_THREAD == null || CAN_START_NEW_THREAD) && AUTO_BATCH) {
-			CURRENT_THREAD = new BatchThread(CONTEXT, CLIENT, EVENT_DATABASE,
-					GAME_KEY, SECRET_KEY, SEND_EVENT_INTERVAL,
-					NETWORK_POLL_INTERVAL, CACHE_LOCALLY);
+			CURRENT_THREAD = new BatchThread(CONTEXT, CLIENT, GAME_KEY,
+					SECRET_KEY, SEND_EVENT_INTERVAL, NETWORK_POLL_INTERVAL,
+					CACHE_LOCALLY);
 			CURRENT_THREAD.start();
 			CAN_START_NEW_THREAD = false;
 		}
@@ -1029,17 +1022,19 @@ public class GameAnalytics {
 	 * used in production. This call will block until the database is cleared.
 	 */
 	public static void clearDatabase() {
-		if (INITIALISED) {
-			EVENT_DATABASE.clear();
+		// Has to be initialised and context not null, but start session doesn't
+		// necessarily have to have been called.
+		if (INITIALISED && CONTEXT != null) {
+			EventDatabase.clear(CONTEXT);
 		} else {
 			GALog.w("Warning: GameAnalytics has not been initialised. Call GameAnalytics.initialise(Context context, String secretKey, String gameKey) first");
 		}
 	}
 
-	protected static void setGoogleAID(String id) {
+	protected static void setGoogleAID(String id, Context context) {
 		GOOGLE_AID = id;
 
-		if (isUseGoogleAIDIfAvailable()) {
+		if (isUseGoogleAIDIfAvailable(context)) {
 			// Use as main user id but respect custom, developer specified
 			// user_id
 			if (USER_ID == null) {
@@ -1053,7 +1048,7 @@ public class GameAnalytics {
 		}
 	}
 
-	protected static void setUseGoogleAIDIfAvailable() {
+	protected static void setUseGoogleAIDIfAvailable(Context context) {
 		SharedPreferences hash = CONTEXT.getSharedPreferences(
 				GAME_ANALYTICS_HASHSTORE, Context.MODE_PRIVATE);
 		SharedPreferences.Editor editor = hash.edit();
@@ -1061,7 +1056,7 @@ public class GameAnalytics {
 		editor.commit();
 	}
 
-	private static boolean isUseGoogleAIDIfAvailable() {
+	private static boolean isUseGoogleAIDIfAvailable(Context context) {
 		SharedPreferences hash = CONTEXT.getSharedPreferences(
 				GAME_ANALYTICS_HASHSTORE, Context.MODE_PRIVATE);
 		return hash.getBoolean(USE_GOOGLE_AID, false);

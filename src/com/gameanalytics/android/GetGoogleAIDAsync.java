@@ -28,7 +28,7 @@ public class GetGoogleAIDAsync extends AsyncTask<Void, Void, Void> {
 				GameAnalytics.disableAnalytics();
 			} else {
 				GALog.i( "Google AID is available.");
-				GameAnalytics.setGoogleAID(adInfo.getId());
+				GameAnalytics.setGoogleAID(adInfo.getId(), context);
 			}
 		} catch (IOException e) {
 			// Unrecoverable error connecting to Google Play services (e.g.,

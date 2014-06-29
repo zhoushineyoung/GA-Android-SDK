@@ -24,27 +24,18 @@ import java.util.HashMap;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
 
 public class EventDatabase {
 
-	private OpenHelper dbHelper;
-	private SQLiteDatabase db;
+	private static DBOpenHelper dbHelper;
 
-	protected EventDatabase(Context context) {
-		dbHelper = new OpenHelper(context);
-		open();
+	private static DBOpenHelper getDBHelper(Context context){
+		if (dbHelper == null) {
+			dbHelper = new DBOpenHelper(context);
+		}
+		return dbHelper;
 	}
-
-	protected void open() {
-		this.db = dbHelper.getWritableDatabase();
-	}
-
-	protected void close() {
-		dbHelper.close();
-	}
-
+	
 	// Other values
 	public final static String DEFAULT_GAME_KEY = "default_game_key";
 
@@ -117,9 +108,9 @@ public class EventDatabase {
 	// The following methods are synchronized so that extra events won't be
 	// added to the database while the current lot are being pulled out and
 	// sent.
-	synchronized protected Object[] getEvents() {
+	synchronized static protected Object[] getEvents(Context context) {
 		// Get all events
-		Cursor cursor = db.query(TABLENAME, null, USER_ID + " is not null",
+		Cursor cursor = getDBHelper(context).getWritableDatabase().query(TABLENAME, null, USER_ID + " is not null",
 				null, null, null, ROW_ID);
 
 		// Create Hashmaps of event arrays to support multiple game ids
@@ -295,17 +286,17 @@ public class EventDatabase {
 				qualityEvents, errorEvents };
 	}
 
-	synchronized private void insert(ContentValues values) {
-		if (MAXIMUM_EVENT_STORAGE == 0 || !isFull()) {
-			db.insert(TABLENAME, null, values);
+	synchronized static private void insert(ContentValues values, Context context) {
+		if (MAXIMUM_EVENT_STORAGE == 0 || !isFull(context)) {
+			getDBHelper(context).getWritableDatabase().insert(TABLENAME, null, values);
 		} else {
 			GALog.i("Event not added to database, database is full.");
 		}
 	}
 
-	private boolean isFull() {
+	private static boolean isFull(Context context) {
 		boolean isFull;
-		Cursor cursor = db.query(TABLENAME, new String[] { ROW_ID }, null,
+		Cursor cursor = getDBHelper(context).getWritableDatabase().query(TABLENAME, new String[] { ROW_ID }, null,
 				null, null, null, null);
 		if (cursor.getCount() >= MAXIMUM_EVENT_STORAGE) {
 			isFull = true;
@@ -316,8 +307,8 @@ public class EventDatabase {
 		return isFull;
 	}
 
-	synchronized protected void deleteSentEvents(
-			ArrayList<Integer> eventsToDelete, String category) {
+	synchronized static protected void deleteSentEvents(
+			ArrayList<Integer> eventsToDelete, String category, Context context) {
 		GALog.i("Deleting " + eventsToDelete.size() + " " + category
 				+ " events");
 		String idList = "(";
@@ -329,34 +320,34 @@ public class EventDatabase {
 		}
 		idList += ")";
 
-		db.delete(TABLENAME, "_id IN " + idList, null);
+		getDBHelper(context).getWritableDatabase().delete(TABLENAME, "_id IN " + idList, null);
 	}
 
-	synchronized protected void deleteEventsWithoutUserId() {
+	synchronized static protected void deleteEventsWithoutUserId(Context context) {
 		GALog.i("Deleting events without user id, respecting user preference to disabled tracking.");
-		db.delete(TABLENAME, USER_ID + " is null", null);
+		getDBHelper(context).getWritableDatabase().delete(TABLENAME, USER_ID + " is null", null);
 	}
 
-	synchronized protected void clear() {
-		db.delete(TABLENAME, null, null);
+	synchronized static protected void clear(Context context) {
+		getDBHelper(context).getWritableDatabase().delete(TABLENAME, null, null);
 	}
 
 	// This method is and should only called from background thread from
 	// GetGoogleAIDAsync.
-	synchronized protected void populateEventsWithNoUserId(String userId,
-			String googleAID) {
+	synchronized static protected void populateEventsWithNoUserId(String userId,
+			String googleAID, Context context) {
 		ContentValues values = new ContentValues();
 		values.put(USER_ID, userId);
 		values.put(GOOGLE_AID, googleAID);
-		int updated = db.update(TABLENAME, values, USER_ID + " is null", null);
+		int updated = getDBHelper(context).getWritableDatabase().update(TABLENAME, values, USER_ID + " is null", null);
 		GALog.i(updated + " events populated with new user_id.");
 	}
 
 	// END OF SYNCHRONISED EVENTS
 
-	protected void addDesignEvent(String gameKey, String secretKey,
+	protected static void addDesignEvent(String gameKey, String secretKey,
 			String userId, String sessionId, String build, String eventId,
-			String area, Float x, Float y, Float z, Float value) {
+			String area, Float x, Float y, Float z, Float value, final Context context) {
 		final ContentValues values = new ContentValues();
 		values.put(GAME_KEY, gameKey);
 		values.put(SECRET_KEY, secretKey);
@@ -384,14 +375,14 @@ public class EventDatabase {
 		// method, main thread can return.
 		new Thread() {
 			public void run() {
-				insert(values);
+				insert(values,context);
 			}
 		}.start();
 	}
 
-	protected void addBusinessEvent(String gameKey, String secretKey,
+	protected static void addBusinessEvent(String gameKey, String secretKey,
 			String userId, String sessionId, String build, String eventId,
-			String area, Float x, Float y, Float z, String currency, int amount) {
+			String area, Float x, Float y, Float z, String currency, int amount, final Context context) {
 		final ContentValues values = new ContentValues();
 		values.put(GAME_KEY, gameKey);
 		values.put(SECRET_KEY, secretKey);
@@ -417,19 +408,19 @@ public class EventDatabase {
 		// method, main thread can return.
 		new Thread() {
 			public void run() {
-				insert(values);
+				insert(values,context);
 			}
 		}.start();
 	}
 
-	protected void addUserEvent(String gameKey, String secretKey,
+	protected static void addUserEvent(String gameKey, String secretKey,
 			String userId, String sessionId, String build, String area,
 			Float x, Float y, Float z, Character gender, Integer birthYear,
 			Integer friendCount, String platform, String device,
 			String osMajor, String osMinor, String sdkVersion,
 			String installPublisher, String installSite,
 			String installCampaign, String installAdgroup, String installAd,
-			String installKeyword, String androidId, String googleAID) {
+			String installKeyword, String androidId, String googleAID, final Context context) {
 		final ContentValues values = new ContentValues();
 		values.put(GAME_KEY, gameKey);
 		values.put(SECRET_KEY, secretKey);
@@ -475,14 +466,14 @@ public class EventDatabase {
 		// method, main thread can return.
 		new Thread() {
 			public void run() {
-				insert(values);
+				insert(values,context);
 			}
 		}.start();
 	}
 
-	protected void addQualityEvent(String gameKey, String secretKey,
+	protected static void addQualityEvent(String gameKey, String secretKey,
 			String userId, String sessionId, String build, String eventId,
-			String area, Float x, Float y, Float z, String message) {
+			String area, Float x, Float y, Float z, String message, final Context context) {
 		final ContentValues values = new ContentValues();
 		values.put(GAME_KEY, gameKey);
 		values.put(SECRET_KEY, secretKey);
@@ -507,14 +498,14 @@ public class EventDatabase {
 		// method, main thread can return.
 		new Thread() {
 			public void run() {
-				insert(values);
+				insert(values,context);
 			}
 		}.start();
 	}
 
-	protected void addErrorEvent(String gameKey, String secretKey,
+	protected static void addErrorEvent(String gameKey, String secretKey,
 			String userId, String sessionId, String build, String area,
-			Float x, Float y, Float z, String message, String severity) {
+			Float x, Float y, Float z, String message, String severity, final Context context) {
 		final ContentValues values = new ContentValues();
 		values.put(GAME_KEY, gameKey);
 		values.put(SECRET_KEY, secretKey);
@@ -539,70 +530,12 @@ public class EventDatabase {
 		// method, main thread can return.
 		new Thread() {
 			public void run() {
-				insert(values);
+				insert(values,context);
 			}
 		}.start();
 	}
 
-	protected void setMaximumEventStorage(int maximumEventStorage) {
+	protected static void setMaximumEventStorage(int maximumEventStorage) {
 		MAXIMUM_EVENT_STORAGE = maximumEventStorage;
-	}
-
-	// OPENHELPER CLASS
-	private class OpenHelper extends SQLiteOpenHelper {
-
-		// Database details
-		private final static String DB_NAME = "GameAnalytics";
-		private final static int DB_VERSION = 4;
-
-		public OpenHelper(Context context) {
-			super(context, DB_NAME, null, DB_VERSION);
-		}
-
-		@Override
-		public void onCreate(SQLiteDatabase db) {
-			// Database is created for the first time
-			// Create tables:
-			GALog.i("Creating database to store events.");
-			db.execSQL(CREATE_TABLE);
-
-			// From version 1.14.0 onwards, we use Google AID if available.
-			// Set preference when creating table to avoid changing user IDs of
-			// existing users.
-			GameAnalytics.setUseGoogleAIDIfAvailable();
-		}
-
-		@Override
-		public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-			// Version 1 - ORIGINAL
-			// Version 2 - Added optional user fields
-			// Version 3 - Added severity column
-			if (newVersion > oldVersion) {
-				String addColumn = "ALTER TABLE " + TABLENAME + " ADD COLUMN ";
-				String text = " text";
-				if (oldVersion <= 1) {
-					db.execSQL(addColumn + PLATFORM + text);
-					db.execSQL(addColumn + DEVICE + text);
-					db.execSQL(addColumn + OS_MAJOR + text);
-					db.execSQL(addColumn + OS_MINOR + text);
-					db.execSQL(addColumn + SDK_VERSION + text);
-					db.execSQL(addColumn + INSTALL_PUBLISHER + text);
-					db.execSQL(addColumn + INSTALL_SITE + text);
-					db.execSQL(addColumn + INSTALL_CAMPAIGN + text);
-					db.execSQL(addColumn + INSTALL_ADGROUP + text);
-					db.execSQL(addColumn + INSTALL_AD + text);
-					db.execSQL(addColumn + INSTALL_KEYWORD + text);
-					db.execSQL(addColumn + GAME_KEY + text);
-					db.execSQL(addColumn + SECRET_KEY + text);
-					db.execSQL(addColumn + ANDROID_ID + text);
-				}
-				if (oldVersion <= 2) {
-					db.execSQL(addColumn + SEVERITY + text);
-				}
-				if (oldVersion <= 3) {
-					db.execSQL(addColumn + GOOGLE_AID + text);
-				}
-			}
-		}
 	}
 }

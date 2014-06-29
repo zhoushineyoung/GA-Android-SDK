@@ -20,6 +20,8 @@ package com.gameanalytics.android;
 
 import java.util.ArrayList;
 
+import android.content.Context;
+
 import com.google.gson.Gson;
 import com.loopj.twicecircled.android.http.AsyncHttpResponseHandler;
 
@@ -45,14 +47,14 @@ public class PostResponseHandler extends AsyncHttpResponseHandler {
 	private static final String NOT_IMPLEMENTED_DESC = "The used HTTP method is not supported. Please only use the POST method for submitting data.";
 
 	private ArrayList<Integer> eventsToDelete;
-	private EventDatabase eventDatabase;
 	private String category;
+	private Context context;
 
 	public PostResponseHandler(ArrayList<Integer> eventsToDelete,
-			EventDatabase eventDatabase, String category) {
+			String category, Context context) {
 		this.category = category;
 		this.eventsToDelete = eventsToDelete;
-		this.eventDatabase = eventDatabase;
+		this.context = context;
 	}
 
 	@Override
@@ -69,7 +71,7 @@ public class PostResponseHandler extends AsyncHttpResponseHandler {
 	public void onSuccess(int statusCode, String content) {
 		// Print response to log
 		GALog.i(category + " events: Succesful response: " + content);
-		eventDatabase.deleteSentEvents(eventsToDelete, category);
+		EventDatabase.deleteSentEvents(eventsToDelete, category, context);
 	}
 
 	@Override
@@ -81,9 +83,9 @@ public class PostResponseHandler extends AsyncHttpResponseHandler {
 		try {
 			errorResponse = gson.fromJson(content, ErrorResponse.class);
 		} catch (Exception e) {
-			GALog.e(category
-					+ " events: Error converting failure response from json: "
-					+ content, e);
+			// New codes for error response:
+			errorResponse = new ErrorResponse();
+			errorResponse.message = content;
 		}
 
 		if (errorResponse != null) {
@@ -122,6 +124,24 @@ public class PostResponseHandler extends AsyncHttpResponseHandler {
 			case 501:
 				errorDescription = NOT_IMPLEMENTED_DESC;
 				break;
+			default:
+				// Code not set properly, do it based on message only
+				if (errorResponse.message.equals(BAD_REQUEST)) {
+					errorDescription = BAD_REQUEST_DESC;
+				} else if (errorResponse.message.equals(NO_GAME)) {
+					errorDescription = NO_GAME_DESC;
+				} else if (errorResponse.message.equals(DATA_NOT_FOUND)) {
+					errorDescription = DATA_NOT_FOUND_DESC;
+				} else if (errorResponse.message.equals(UNAUTHORIZED)) {
+					errorDescription = UNAUTHORIZED_DESC;
+				} else if (errorResponse.message.equals(SIG_NOT_FOUND)) {
+					errorDescription = SIG_NOT_FOUND_DESC;
+				} else if (errorResponse.message.equals(GAME_NOT_FOUND)) {
+					errorDescription = GAME_NOT_FOUND_DESC;
+				} else if (errorResponse.message.equals(METHOD_NOT_SUPPORTED)) {
+					errorDescription = METHOD_NOT_SUPPORTED_DESC;
+				}
+				break;
 			}
 			if (errorDescription != null) {
 				GALog.e("Error response code: " + errorResponse.code
@@ -141,7 +161,7 @@ public class PostResponseHandler extends AsyncHttpResponseHandler {
 	protected String getCategory() {
 		return category;
 	}
-	
+
 	protected int getNumberOfEvents() {
 		return eventsToDelete.size();
 	}
