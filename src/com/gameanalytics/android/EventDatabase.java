@@ -36,6 +36,10 @@ public class EventDatabase {
 		return dbHelper;
 	}
 	
+	protected static void initialise(Context context){
+		getDBHelper(context).getWritableDatabase();
+	}
+	
 	// Other values
 	public final static String DEFAULT_GAME_KEY = "default_game_key";
 
