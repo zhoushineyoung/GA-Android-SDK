@@ -26,7 +26,7 @@ public class DBOpenHelper extends SQLiteOpenHelper {
 		// From version 1.14.0 onwards, we use Google AID if available.
 		// Set preference when creating table to avoid changing user IDs of
 		// existing users.
-		GameAnalytics.setUseGoogleAIDIfAvailable(context);
+		GameAnalytics.setNewUser(true);
 	}
 
 	@Override

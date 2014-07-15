@@ -5,6 +5,11 @@ This is the Android wrapper for GameAnalytics. It allows you to get analytics da
 
 **Changelog**
 
+**1.14.3**
+- Updated to use application context.
+- This should solve pre-existing issue of NullPointerException on access to Google Advertising ID preference.
+- Improved algorithm for determining ID to use.
+
 **1.14.2**
 - Switched to static Database Helper to avoid recently introduced bug: "Illegal State Exception - attempt to re-open an already-closed object".
 - Tweaked error response handling to handle errors without proper response codes.

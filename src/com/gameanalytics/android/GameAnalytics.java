@@ -84,11 +84,16 @@ public class GameAnalytics {
 	private static final String FPS_EVENT_NAME = "GA:AverageFPS";
 	private static final String CRITICAL_FPS_EVENT_NAME = "GA:CriticalFPS";
 	private static final String ANDROID = "Android";
-	private static final String SDK_VERSION = "android 1.14.1";
+	private static final String SDK_VERSION = "android 1.14.3";
 
 	// HASHMAP AND KEYS
 	private static final String GAME_ANALYTICS_HASHSTORE = "game_analytics_hashstore";
-	private static final String USE_GOOGLE_AID = "use_google_aid";
+	private static final String ID_TYPE = "id_type";
+	private static final String NEW_USER = "use_google_aid";
+
+	// ID TYPES
+	protected static final String TYPE_UUID = "uuid";
+	protected static final String TYPE_GOOGLE_AID = "google_aid";
 
 	// ERROR EVENT SEVERITY TYPES
 	/**
@@ -179,7 +184,7 @@ public class GameAnalytics {
 			return;
 		}
 		// Get reference to first context
-		CONTEXT = context;
+		CONTEXT = context.getApplicationContext();
 
 		// Get user id
 		UNHASHED_ANDROID_ID = Secure.getString(context.getContentResolver(),
@@ -196,9 +201,20 @@ public class GameAnalytics {
 				.getUncaughtExceptionHandler();
 		EXCEPTION_LOGGER = new ExceptionLogger();
 
+		// Force database to get writable database now. This also makes it
+		// perform existing user check for Google AID next
+		EventDatabase.initialise(CONTEXT);
+
 		// Google AID
-		GetGoogleAIDAsync getGAIDAsync = new GetGoogleAIDAsync(CONTEXT);
-		getGAIDAsync.execute();
+		if (!isNewUser() || TYPE_UUID.equals(getIdType())) {
+			// If existing user, always use UUID
+			GALog.i("Existing user, continue to use Android UUID");
+			setUserIdToUUID(false);
+		} else {
+			// If not then consider using the Google AID
+			GetGoogleAIDAsync getGAIDAsync = new GetGoogleAIDAsync(CONTEXT);
+			getGAIDAsync.execute();
+		}
 
 		// Set boolean initialised, newEvent() can only be called after
 		// initialise() and startSession()
@@ -211,14 +227,20 @@ public class GameAnalytics {
 	// detected and the UUID will continue to be used.
 	// 2. If the Google AID is unavailable.
 	// 3. If the user opts out of tracking
-	protected static void setUserIdToUUID() {
+	protected static void setUserIdToUUID(boolean needToFillOut) {
 		// Respect custom user_id
 		if (USER_ID == null) {
 			setUserId(md5(UNHASHED_ANDROID_ID));
+
+			// Now we are locked into using the UUID
+			setIDType(TYPE_UUID);
 		}
 
-		// Populate user ids of any events created before user id finalised
-		populateEventsWithNoUserId();
+		// Populate user ids of any events created before user id finalised,
+		// only needed if GoogleAID is checked, see initialise() method
+		if (needToFillOut) {
+			populateEventsWithNoUserId();
+		}
 	}
 
 	private static void populateEventsWithNoUserId() {
@@ -226,9 +248,13 @@ public class GameAnalytics {
 		// is an asynchronous process. Therefore any events created directly
 		// after calling initialise() will have user_id = "null". This code will
 		// fill them in with the new id.
-		if (USER_ID != null && ready()) {
-			EventDatabase.populateEventsWithNoUserId(USER_ID, GOOGLE_AID,
-					CONTEXT);
+		if (USER_ID != null) {
+			if (ready()) {
+				EventDatabase.populateEventsWithNoUserId(USER_ID, GOOGLE_AID,
+						CONTEXT);
+			} else {
+				GALog.w("Warning: trying to fill in events with no user id but Game Analytics is not initialised.");
+			}
 		} else {
 			GALog.w("Warning: trying to fill in events with no user id but user id is still null.");
 		}
@@ -261,7 +287,7 @@ public class GameAnalytics {
 	 */
 	public static void startSession(Context context) {
 		// Update current context
-		CONTEXT = context;
+		CONTEXT = context.getApplicationContext();
 		AREA = context.getClass().getSimpleName();
 
 		// Current time:
@@ -290,7 +316,6 @@ public class GameAnalytics {
 		// sessionTimeOut is some time after now
 		SESSION_END_TIME = System.currentTimeMillis() + SESSION_TIME_OUT;
 		SESSION_STARTED = false;
-		CONTEXT = null;
 	}
 
 	/**
@@ -911,7 +936,7 @@ public class GameAnalytics {
 				if (!DISABLED) {
 					return true;
 				} else {
-					GALog.i("Analytics have been disable due to user preferences.");
+					GALog.i("Analytics have been disabled.");
 				}
 			} else {
 				GALog.w("Warning: GameAnalytics session has not started. 1. Have you called GameAnalytics.startSession(Context context) in onResume()? OR 2. Are you trying to send events prior to onResume() being called, for example in onCreate()? You need to call startSession() before sending your first event.");
@@ -1031,35 +1056,57 @@ public class GameAnalytics {
 		}
 	}
 
-	protected static void setGoogleAID(String id, Context context) {
+	protected static void setGoogleAID(String id) {
 		GOOGLE_AID = id;
 
-		if (isUseGoogleAIDIfAvailable(context)) {
 			// Use as main user id but respect custom, developer specified
 			// user_id
 			if (USER_ID == null) {
 				setUserId(id);
+
+				// As soon as we use the AID once, we are locked in and can
+				// never use UUID again
+				setIDType(TYPE_GOOGLE_AID);
 			}
 			populateEventsWithNoUserId();
-		} else {
-			// Existing user, only use in google_aid field
-			GALog.i("...but continue to use UUID because this is an existing user.");
-			setUserIdToUUID();
+	}
+
+	protected static void setNewUser(boolean value) {
+		if (CONTEXT != null) {
+			SharedPreferences hash = CONTEXT.getSharedPreferences(
+					GAME_ANALYTICS_HASHSTORE, Context.MODE_PRIVATE);
+			SharedPreferences.Editor editor = hash.edit();
+			editor.putBoolean(NEW_USER, value);
+			editor.commit();
 		}
 	}
 
-	protected static void setUseGoogleAIDIfAvailable(Context context) {
-		SharedPreferences hash = CONTEXT.getSharedPreferences(
-				GAME_ANALYTICS_HASHSTORE, Context.MODE_PRIVATE);
-		SharedPreferences.Editor editor = hash.edit();
-		editor.putBoolean(USE_GOOGLE_AID, true);
-		editor.commit();
+	protected static boolean isNewUser() {
+		if (CONTEXT != null) {
+			SharedPreferences hash = CONTEXT.getSharedPreferences(
+					GAME_ANALYTICS_HASHSTORE, Context.MODE_PRIVATE);
+			return hash.getBoolean(NEW_USER, false);
+		}
+		return false;
 	}
 
-	private static boolean isUseGoogleAIDIfAvailable(Context context) {
-		SharedPreferences hash = CONTEXT.getSharedPreferences(
-				GAME_ANALYTICS_HASHSTORE, Context.MODE_PRIVATE);
-		return hash.getBoolean(USE_GOOGLE_AID, false);
+	protected static void setIDType(String value) {
+		if (CONTEXT != null) {
+			SharedPreferences hash = CONTEXT.getSharedPreferences(
+					GAME_ANALYTICS_HASHSTORE, Context.MODE_PRIVATE);
+			SharedPreferences.Editor editor = hash.edit();
+			editor.putString(ID_TYPE, value);
+			editor.commit();
+		}
+	}
+
+	protected static String getIdType() {
+		if (CONTEXT != null) {
+			SharedPreferences hash = CONTEXT.getSharedPreferences(
+					GAME_ANALYTICS_HASHSTORE, Context.MODE_PRIVATE);
+			return hash.getString(ID_TYPE, null);
+		}
+		return null;
 	}
 
 	protected static void disableAnalytics() {
