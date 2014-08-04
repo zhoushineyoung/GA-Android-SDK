@@ -9,11 +9,9 @@ public class DBOpenHelper extends SQLiteOpenHelper {
 	// Database details
 	private final static String DB_NAME = "GameAnalytics";
 	private final static int DB_VERSION = 4;
-	private Context context;
 
 	public DBOpenHelper(Context context) {
 		super(context, DB_NAME, null, DB_VERSION);
-		this.context = context;
 	}
 
 	@Override

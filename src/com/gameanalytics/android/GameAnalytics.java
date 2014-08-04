@@ -84,11 +84,12 @@ public class GameAnalytics {
 	private static final String FPS_EVENT_NAME = "GA:AverageFPS";
 	private static final String CRITICAL_FPS_EVENT_NAME = "GA:CriticalFPS";
 	private static final String ANDROID = "Android";
-	private static final String SDK_VERSION = "android 1.14.3";
+	private static final String SDK_VERSION = "android 1.14.4";
 
 	// HASHMAP AND KEYS
 	private static final String GAME_ANALYTICS_HASHSTORE = "game_analytics_hashstore";
-	private static final String ID_TYPE = "id_type";
+	// No longer used but left in for posterity:
+	// private static final String ID_TYPE = "id_type"; 
 	private static final String NEW_USER = "use_google_aid";
 
 	// ID TYPES
@@ -205,16 +206,9 @@ public class GameAnalytics {
 		// perform existing user check for Google AID next
 		EventDatabase.initialise(CONTEXT);
 
-		// Google AID
-		if (!isNewUser() || TYPE_UUID.equals(getIdType())) {
-			// If existing user, always use UUID
-			GALog.i("Existing user, continue to use Android UUID");
-			setUserIdToUUID(false);
-		} else {
-			// If not then consider using the Google AID
-			GetGoogleAIDAsync getGAIDAsync = new GetGoogleAIDAsync(CONTEXT);
-			getGAIDAsync.execute();
-		}
+		// Google AID - Is it available?
+		GetGoogleAIDAsync getGAIDAsync = new GetGoogleAIDAsync(CONTEXT);
+		getGAIDAsync.execute();
 
 		// Set boolean initialised, newEvent() can only be called after
 		// initialise() and startSession()
@@ -227,20 +221,14 @@ public class GameAnalytics {
 	// detected and the UUID will continue to be used.
 	// 2. If the Google AID is unavailable.
 	// 3. If the user opts out of tracking
-	protected static void setUserIdToUUID(boolean needToFillOut) {
+	protected static void setUserIdToUUID() {
 		// Respect custom user_id
 		if (USER_ID == null) {
 			setUserId(md5(UNHASHED_ANDROID_ID));
-
-			// Now we are locked into using the UUID
-			setIDType(TYPE_UUID);
 		}
 
-		// Populate user ids of any events created before user id finalised,
-		// only needed if GoogleAID is checked, see initialise() method
-		if (needToFillOut) {
-			populateEventsWithNoUserId();
-		}
+		// Populate user ids of any events created before user id finalised
+		populateEventsWithNoUserId();
 	}
 
 	private static void populateEventsWithNoUserId() {
@@ -1059,16 +1047,13 @@ public class GameAnalytics {
 	protected static void setGoogleAID(String id) {
 		GOOGLE_AID = id;
 
-			// Use as main user id but respect custom, developer specified
-			// user_id
-			if (USER_ID == null) {
-				setUserId(id);
-
-				// As soon as we use the AID once, we are locked in and can
-				// never use UUID again
-				setIDType(TYPE_GOOGLE_AID);
-			}
-			populateEventsWithNoUserId();
+		// Use as main user id but respect custom, developer specified
+		// user_id
+		if (USER_ID == null) {
+			setUserId(id);
+		}
+		// Populate user ids of any events created before user id finalised
+		populateEventsWithNoUserId();
 	}
 
 	protected static void setNewUser(boolean value) {
@@ -1081,33 +1066,18 @@ public class GameAnalytics {
 		}
 	}
 
-	protected static boolean isNewUser() {
-		if (CONTEXT != null) {
-			SharedPreferences hash = CONTEXT.getSharedPreferences(
-					GAME_ANALYTICS_HASHSTORE, Context.MODE_PRIVATE);
-			return hash.getBoolean(NEW_USER, false);
-		}
-		return false;
-	}
+	// We no longer check whether the user is new or not and always use the AID
+	// if available. We will continue to store the 'new user' information in
+	// case in the future it is required once more.
 
-	protected static void setIDType(String value) {
-		if (CONTEXT != null) {
-			SharedPreferences hash = CONTEXT.getSharedPreferences(
-					GAME_ANALYTICS_HASHSTORE, Context.MODE_PRIVATE);
-			SharedPreferences.Editor editor = hash.edit();
-			editor.putString(ID_TYPE, value);
-			editor.commit();
-		}
-	}
-
-	protected static String getIdType() {
-		if (CONTEXT != null) {
-			SharedPreferences hash = CONTEXT.getSharedPreferences(
-					GAME_ANALYTICS_HASHSTORE, Context.MODE_PRIVATE);
-			return hash.getString(ID_TYPE, null);
-		}
-		return null;
-	}
+	// protected static boolean isNewUser() {
+	// if (CONTEXT != null) {
+	// SharedPreferences hash = CONTEXT.getSharedPreferences(
+	// GAME_ANALYTICS_HASHSTORE, Context.MODE_PRIVATE);
+	// return hash.getBoolean(NEW_USER, false);
+	// }
+	// return false;
+	// }
 
 	protected static void disableAnalytics() {
 		// Currently only called if "LimitAdTracking" is enabled

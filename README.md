@@ -5,6 +5,9 @@ This is the Android wrapper for GameAnalytics. It allows you to get analytics da
 
 **Changelog**
 
+**1.14.4**
+- As of 01/08/14 all new apps/updates to Google Play must use the Android advertising ID if available. SDK updated accordingly. You may notice strange numbers over a short period as users are transferred from one ID to the other.
+
 **1.14.3**
 - Updated to use application context.
 - This should solve pre-existing issue of NullPointerException on access to Google Advertising ID preference.
