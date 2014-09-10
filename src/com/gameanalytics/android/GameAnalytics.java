@@ -84,12 +84,12 @@ public class GameAnalytics {
 	private static final String FPS_EVENT_NAME = "GA:AverageFPS";
 	private static final String CRITICAL_FPS_EVENT_NAME = "GA:CriticalFPS";
 	private static final String ANDROID = "Android";
-	private static final String SDK_VERSION = "android 1.14.4";
+	private static final String SDK_VERSION = "android 1.14.5";
 
 	// HASHMAP AND KEYS
 	private static final String GAME_ANALYTICS_HASHSTORE = "game_analytics_hashstore";
 	// No longer used but left in for posterity:
-	// private static final String ID_TYPE = "id_type"; 
+	// private static final String ID_TYPE = "id_type";
 	private static final String NEW_USER = "use_google_aid";
 
 	// ID TYPES
@@ -984,11 +984,19 @@ public class GameAnalytics {
 
 	private static void sendOffUserStats() {
 		// Automatically log version numbers, model and unhashed android id.
+		String versionString = android.os.Build.VERSION.RELEASE;
+		String shortVersion;
+		if (versionString.length() >= 3) {
+			shortVersion = versionString.substring(0, 3);
+		} else {
+			// Probably a preview build e.g. "L"
+			shortVersion = versionString;
+		}
+
 		newUserEvent(null, null, null, AREA, null, null, null, ANDROID,
-				android.os.Build.MODEL,
-				android.os.Build.VERSION.RELEASE.substring(0, 3),
-				android.os.Build.VERSION.RELEASE, SDK_VERSION, null, null,
-				null, null, null, null, UNHASHED_ANDROID_ID, GOOGLE_AID);
+				android.os.Build.MODEL, shortVersion, versionString,
+				SDK_VERSION, null, null, null, null, null, null,
+				UNHASHED_ANDROID_ID, GOOGLE_AID);
 	}
 
 	protected static void sendingEvents(PostResponseHandler handler) {
