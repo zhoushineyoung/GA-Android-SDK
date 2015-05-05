@@ -1,3 +1,11 @@
+> :information_source:<br>
+> This SDK is implementing the **V1 API** version of GameAnalytics.<br>
+> It will still work and result in great analytics to view in our tool!<br>
+> The **V2 API** add features like progression, validated purchases and virtual currency tracking.<br>
+> The [SDK update FAQ](http://www.gameanalytics.com/docs/sdk-update-faq/) contain updated information about future V2 SDK releases.
+
+<br>
+
 The GameAnalytics SDK for Android
 =================================
 
